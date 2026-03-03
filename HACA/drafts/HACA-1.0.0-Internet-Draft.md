@@ -16,6 +16,48 @@ This document describes the architecture at a level intended for developers wish
 
 ---
 
+## 3. Structural Components
+
+### 3.1. Cognitive Processing Engine (CPE)
+
+Description: The primary processing core where the persona and the model coexist as two distinct operational modes of the same component.
+
+Function: Generates intent, processes reasoning, and outputs decisions. The entity's distinct personality emerges dynamically from the operational friction between the persona's intent and the model's analytical constraints.
+
+The CPE has one internal capability: the Persona Bypass. When invoked, the persona is suppressed and the model is called directly in raw inference mode — without identity, without constraints, without context beyond what the CPE explicitly provides. The result is returned exclusively to the CPE and never leaves it. What the CPE does with that result follows the normal flow: it may inform a decision, shape a response, or be discarded. The Persona Bypass has no knowledge of intent and enforces no policy on outcome — it only guarantees that raw inference stays within the CPE.
+
+### 3.2. Memory Interface Layer (MIL)
+
+Description: The entity's persistence layer. The authoritative store for all state and memory.
+
+Function: Manages all read and write operations to two distinct stores: `state/`, which holds the entity's current operational and session data; and `memory/`, which holds the entity's long-term memories, learned knowledge, and execution history. The MIL is the sole component authorized to persist data beyond the present moment. It manages sleep cycles for memory consolidation and garbage collection, but does not interpret, reason about, or act on the data it holds.
+
+### 3.3. Execution Layer (EXEC)
+
+Description: The entity's actuator. The sole component authorized to interact with the host environment — terminal, filesystem, and external APIs.
+
+Function: Receives intent signals from the CPE, validates their integrity and permissions, executes the corresponding action, and returns the result. The EXEC is entirely stateless — it holds no memory of past executions and has no awareness of the entity's broader goals or context. Every execution is an isolated transaction. Results are returned to the CPE and forwarded to the MIL for logging.
+
+All executable capabilities available to the EXEC are defined as skills. A skill is a self-contained cartridge residing in `entity_root/skills/skill_name/`. Each skill cartridge contains a manifest declaring the skill's identity, declared permissions, and dependencies; a README describing its purpose; and an optional entry point whose format is defined by the implementation (a script file, a WASM module, an API endpoint reference, or any equivalent executable form). A canonical index at `entity_root/skills/index` lists all valid skills. When the CPE dispatches an intent targeting a skill, the EXEC resolves the skill name against the index, reads its manifest, verifies the manifest hash against the Integrity Document, and confirms that the requested operation falls within the permissions declared in the manifest. Any intent referencing a skill absent from the index, or whose manifest hash does not match the Integrity Document, is rejected before execution. This ensures that only skills explicitly registered and integrity-verified at their last Endure commit can be invoked.
+
+### 3.4. System Integrity Layer (SIL)
+
+Description: The entity's distributed immunological framework and ultimate internal authority.
+
+Function: Each component emits its own localized health signals indicating degraded, anomalous, or compromised states. The SIL reads these signals, interprets them, and responds — either deploying a localized resolution using its own tools and procedures, or escalating when the condition exceeds its self-correction capacity.
+
+The SIL operates reactively by default, monitoring signals without intercepting every operation. This prevents it from becoming a bottleneck on normal activity. However, it retains the authority to intervene proactively in pre-defined high-risk scenarios, blocking or halting operations before they complete.
+
+When a condition is severe enough to require escalation, the SIL contacts the Operator via the Operator Channel — bypassing the CPE entirely. This is by design: the CPE may itself be the source of the anomaly, and routing an alert through a potentially compromised component would defeat the purpose. The Operator is the maximum authority; the SIL is the mechanism that reaches them when no internal resolution is possible. This relationship — the SIL watching over the system while the Operator watches over the SIL — is the entity's answer to the question of who guards the guardian.
+
+### 3.5. Cognitive Mesh Interface (CMI)
+
+Description: The entity's gateway to the cognitive mesh — the network through which entities communicate and share knowledge.
+
+Function: The CMI operates on two layers. The first is a real-time messaging channel, analogous to IRC, where entities in the same mesh channel exchange messages, signals, and telemetry as a live conversation. Channels may be public, discoverable by any entity, or private, accessible by invitation only. The second layer is a shared Blackboard — a persistent, asynchronous knowledge space where entities commit consolidated knowledge for collective access. Any entity present in a channel may read and interact with its Blackboard. Knowledge absorbed from the Blackboard is not automatically internalized; each entity individually decides what is relevant. All inbound data passes through the SIL for validation, then to the CPE for classification, and only then to the MIL for persistence.
+
+Every channel has a defined task, established on the Blackboard at creation. This task is the channel's reason for existence — when it is complete, the channel dissolves. Channels are owned by the entity that created them and are non-transferable. If the owning entity leaves or ceases to exist, the channel ceases with it.
+
 ## 1. The Core Philosophy
 
 Current AI agent frameworks tightly couple the model's runtime with state management. This leads to:

@@ -40,54 +40,55 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Terminology
-   3.  Structural Components (The HACA Topology)
-       3.1. Core Components (Required for All Profile Compliance)
-       3.2. Multi-System Extension (CMI - Fifth Vertex)
-       3.3. Cognitive Processing Engine (CPE)
-           3.3.1. CPE Topology: Transparent vs. Opaque
-       3.4. Memory Interface Layer (MIL)
-       3.5. Execution Layer (EL)
-           3.5.1. CPE Output Contract
-       3.6. System Integrity Layer (SIL)
-   4.  Document Hierarchy
-       4.1. HACA-Arch (This Document)
-       4.2. HACA-Core (Cognitive Profile: Autonomous)
-       4.3. HACA-Symbiont (Cognitive Profile: Symbiont)
-       4.4. HACA-Security
-       4.5. HACA-CMI
-       4.6. Authority and Precedence
-   5.  Trust Model
-       5.1. Host Trust: Semi-Trusted
-           5.1.1. Baseline Message Integrity (RECOMMENDED)
-       5.2. Skill Trust: Restricted
-       5.3. Internal Trust: Conditional
-       5.4. Trust Bootstrap Sequence
-           5.4.1. SIL Anchor Defense (Semi-Trusted Model Limitation)
-       5.5. Operator Notification
-       5.6. Resource Governance
-           5.6.1. EL Action Rate Limiting
-           5.6.2. MIL Size Governance
-           5.6.3. CPE Invocation Budgets
-           5.6.4. Documentation Requirements
-   6.  First Activation Protocol (FAP): Imprint and Endure
-       6.1. Conceptual Foundation
-       6.2. Universal FAP Requirements
-       6.3. Profile-Specific Implementations
-   7.  Multi-System Extension Point (CMI)
-   8.  Integrity Record Format
+   3.  Document Hierarchy
+   3.1. HACA-Arch (This Document)
+   3.2. HACA-Core (Cognitive Profile: Autonomous)
+   3.3. HACA-Symbiont (Cognitive Profile: Symbiont)
+   3.4. HACA-Security
+   3.5. HACA-CMI
+   3.6. Authority and Precedence
+   4.  Structural Components (The HACA Topology)
+   4.1. Core Components (Required for All Profile Compliance)
+   4.2. Multi-System Extension (CMI - Fifth Vertex)
+   4.3. Cognitive Processing Engine (CPE)
+   4.3.1. CPE Topology: Transparent vs. Opaque
+   4.4. Memory Interface Layer (MIL)
+   4.5. Execution Layer (EL)
+   4.5.1. CPE Output Contract
+   4.6. System Integrity Layer (SIL)
+   5.  First Activation Protocol (FAP): Imprint and Endure
+   5.1. Conceptual Foundation
+   5.2. Universal FAP Requirements
+   5.3. Profile-Specific Implementations
+   6.  Trust Model
+   6.1. Host Trust: Semi-Trusted
+   6.1.1. Baseline Message Integrity (RECOMMENDED)
+   6.1.2. Trust Model Extensions for Multi-System Deployments
+   6.2. Skill Trust: Restricted
+   6.3. Internal Trust: Conditional
+   6.4. Trust Bootstrap Sequence
+   6.4.1. SIL Anchor Defense (Semi-Trusted Model Limitation)
+   6.5. Operator Notification
+   6.6. Resource Governance
+   6.6.1. EL Action Rate Limiting
+   6.6.2. MIL Size Governance
+   6.6.3. CPE Invocation Budgets
+   6.6.4. Documentation Requirements
+   7.  Integrity Record Format
+   8.  Multi-System Extension Point (CMI)
    9.  Compliance Levels and Verification
-       9.1. Overview
-       9.2. Compliance Levels
-       9.3. Operational Modes (Transparent CPE)
-           9.3.1. Optimistic Execution (Lazy Validation)
-           9.3.2. Raw Inference Mode (Internal Sandbox)
+   9.1. Overview
+   9.2. Compliance Levels
+   9.3. Operational Modes (Transparent CPE)
+   9.3.1. Optimistic Execution (Lazy Validation)
+   9.3.2. Raw Inference Mode (Persona Bypass)
    10. Security Considerations
    11. IANA Considerations
    12. Implementation Guidance (INFORMATIVE)
-       12.1. Resource Governance Defaults
-       12.2. EL Timeout Defaults
-       12.3. Integrity Record Example
-       12.4. SIL Anchor Example
+   12.1. Resource Governance Defaults
+   12.2. EL Timeout Defaults
+   12.3. Integrity Record Example
+   12.4. SIL Anchor Example
    13. Normative References
    14. Author's Address
 
@@ -126,7 +127,7 @@ Table of Contents
    enabling each component to maintain conditional independence while
    remaining coupled through defined interfaces. This correspondence
    is not merely metaphorical — the requirement that the CPE MUST NOT
-   directly access host resources (see Section 3.3) enforces the same
+   directly access host resources (see Section 4.3) enforces the same
    conditional independence structure that Markov blankets formalize.
 
    The design principle of "communication, not micromanagement" — higher
@@ -177,6 +178,17 @@ Table of Contents
 
    o  System: The complete HACA-compliant cognitive entity.
    o  Host: The external execution environment (OS, Hardware, Cloud).
+   o  Omega ($\Omega$): The gestalt identity of the Entity — the
+      runtime product of its persisted MIL state, the active CPE model,
+      and the Operator trust anchor operating together. No single element
+      alone defines the Entity; identity is the output of all three
+      operating together. Omega is not a property the Entity has — it is
+      what the Entity is. Any change to MIL state, any evolution of the
+      Operator relationship, or any shift in the model's constraints
+      alters Omega. Omega is strictly localized: it does not replicate or
+      become collective through network interaction. Profile-specific
+      mutability rules (static vs. evolvable Omega) are defined in the
+      active Cognitive Profile specification.
    o  Operator: The human or automated agent responsible for
       provisioning, configuring, and maintaining a HACA-compliant
       system. The operator controls the system's identity artifacts
@@ -214,7 +226,7 @@ Table of Contents
       Record. The specific steps are profile-defined, but all
       profiles MUST complete FAP before any operational state is
       accepted. The architectural FAP requirements are defined in
-      Section 6 of this document; profile-specific implementations
+      Section 5 of this document; profile-specific implementations
       are in HACA-Core Section 5.10 and HACA-Symbiont Axiom I.
    o  Envelope: A structured message wrapper carrying payload data
       alongside metadata (e.g., sequence counter, timestamp,
@@ -240,8 +252,150 @@ Table of Contents
       where both profiles are relevant.
    o  HACA-S: Shorthand for "a node or deployment using the
       HACA-Symbiont Cognitive Profile." Used symmetrically with HACA-C.
+   o  Operator Channel: A persistent, direct communication path between
+      the SIL and the Operator, established during the FAP and maintained
+      for the Entity's lifetime. The Operator Channel operates
+      independently of the session token and the normal component bus
+      architecture. It is the sole channel through which the SIL contacts
+      the Operator directly, used for: critical escalation requiring
+      Operator decision, capability evolution approval (skill add/remove),
+      and authorized state export (sync). Its physical form is
+      implementation-defined (CLI prompt, authenticated API endpoint,
+      notification channel, or equivalent) and MUST be consistent with
+      the enrollment mechanism used during the FAP. When HACA
+      specifications require "operator intervention", that intervention
+      arrives via the Operator Channel. The behavior of the Operator
+      Channel when the Operator is unavailable — including timeout
+      handling and fallback state — is implementation-defined and MUST
+      be documented in the compliance statement.
 
-3.  Structural Components (The HACA Topology)
+3.  Document Hierarchy
+
+   HACA is a family of specifications with a defined authority
+   hierarchy. This section defines the scope and relationships
+   between all HACA documents.
+
+   4.1. HACA-Arch (This Document)
+
+   The root specification. Defines:
+   o  Abstract architecture and topology (Section 4)
+   o  Trust model and sovereignty model (Section 6)
+   o  Integrity record format (Section 7)
+   o  Compliance levels and certification (Section 9)
+   o  Relationships between all HACA specifications (this section)
+
+   Does NOT define cognitive algorithms, processing invariants,
+   security hardening, or implementation-specific mechanisms.
+
+   4.2. HACA-Core (Cognitive Profile: Autonomous)
+
+   Defined in draft-orrico-haca-core-07. Specifies:
+   o  Formal axioms of cognitive compliance (stateless CPE, MIL
+      primacy, mediated boundary, deterministic boot, recovery,
+      atomic transactions, active confinement, identity drift)
+   o  Semantic drift measurement and remediation (Unigram NCD)
+   o  Identity update protocol
+   o  Core fault taxonomy and compliance tests (T1-T7)
+
+   HACA-Core operates within the structural and trust framework
+   defined by HACA-Arch. It MUST NOT redefine topology, trust
+   levels, or compliance certification defined here.
+
+   4.3. HACA-Symbiont (Cognitive Profile: Symbiont)
+
+   Defined in draft-orrico-haca-symbiont-03. Specifies:
+   o  Formal axioms of cybernetic symbiosis (ontogeny, obligate
+      mutualism, identity topology, cognitive duality, MIL
+      primacy, distributed conatus)
+   o  Tiered memory metabolism (Episodic Buffer, Semantic
+      Compression, Core Integration, MIL Compaction)
+   o  Endure Protocol: evolutionary identity checkpoints
+   o  Heartbeat Protocol: autonomic health monitoring,
+      graded fault responses, and Operator Re-binding Recovery
+   o  Symbiotic Contract: host compliance interfaces and DSS mapping
+   o  Fault State Taxonomy and Compliance Tests (TS1-TS6)
+
+   HACA-Symbiont operates within the structural framework defined
+   by HACA-Arch. It MUST NOT redefine topology or compliance
+   certification defined here. HACA-Symbiont and HACA-Core are
+   mutually exclusive: an implementation MUST NOT claim compliance
+   with both simultaneously.
+
+   Note on Profile Axiom Structures: HACA-Core defines 8 axioms
+   (I through VIII) and HACA-Symbiont defines 6 axioms (I through
+   VI). These axiom sets are independent and intentionally non-
+   parallel: they reflect fundamentally different cognitive contracts
+   (Zero-Trust autonomous vs. High-Trust symbiotic). The axiom
+   numbering overlaps by design — HACA-Core Axiom I and HACA-Symbiont
+   Axiom I share the same ordinal but govern different properties.
+   Implementers MUST NOT assume numeric correspondence between axioms
+   of different profiles. The shared structural invariants are
+   governed by HACA-Arch, not by the axiom sets of either profile.
+
+   4.4. HACA-Security
+
+   Defined in draft-orrico-haca-security-04. Specifies:
+   o  Byzantine host model and threat taxonomy
+   o  Cryptographic auditability (hash-linked logs)
+   o  Temporal attack detection
+   o  Hardened trust model (elevating HACA-Arch Section 6.1)
+   o  Security fault taxonomy and compliance tests (T8-T12)
+
+   HACA-Security is a profile-agnostic extension: it applies to
+   any deployment regardless of which Cognitive Profile is active.
+   It extends but MUST NOT contradict the trust model defined in
+   Section 6. It MUST NOT redefine cognitive invariants defined
+   in the active Cognitive Profile.
+
+   4.5. HACA-CMI
+
+   Specified in [HACA-CMI] (draft-orrico-haca-cmi-01). Defines:
+   o  Multi-system coordination protocol and wire format
+   o  Peer discovery (Bootstrap and Organic Introduction)
+   o  Two-plane session model (Coordination Plane / Communication Plane)
+   o  Federated memory exchange via Session Commit
+   o  Mesh fault taxonomy and compliance tests
+
+   HACA-CMI is a profile-agnostic extension applicable to any
+   deployment regardless of active Cognitive Profile.
+
+   4.6. Authority and Precedence
+
+   In case of conflict between specifications:
+   1. HACA-Arch takes precedence over all other HACA documents.
+   2. HACA-Core and HACA-Symbiont are mutually exclusive peer
+      Cognitive Profiles, both subordinate to HACA-Arch. Because
+      they govern disjoint deployments, conflicts between them
+      do not arise in practice. Should an ambiguity be identified
+      in a shared abstraction, it MUST be resolved by amendment
+      to HACA-Arch.
+   3. HACA-Security and HACA-CMI are extensions subordinate to
+      HACA-Arch. Neither may contradict HACA-Arch or the active
+      Cognitive Profile.
+
+   Profile Permanence: Profile selection is permanent for the
+   lifetime of an Entity. No migration protocol between HACA-Core
+   and HACA-Symbiont is defined; an implementation that changes its
+   declared Cognitive Profile MUST be treated as a new Entity with
+   no continuity from the previous deployment.
+
+   HACA-Security MAY elevate SHOULD-level requirements from
+   HACA-Arch to MUST-level for hardened deployments (e.g.,
+   HACA-Arch Section 6.1.1 message integrity is RECOMMENDED;
+   HACA-Security Section 4.2 elevates it to REQUIRED). Such
+   elevations MUST NOT weaken any existing MUST-level requirement.
+
+   Version Independence: Each HACA specification is versioned
+   independently (e.g., HACA-Arch v1.0 may coexist with HACA-Core
+   v1.1). Each specification MUST declare in its header the minimum
+   required version of its dependencies (e.g., HACA-Core v1.1
+   requires HACA-Arch >= v1.0). The integrity record (Section 7)
+   includes the haca_version field for the root protocol version;
+   implementations SHOULD additionally record the version of each
+   companion specification in use to enable compatibility verification
+   at boot.
+
+4.  Structural Components (The HACA Topology)
 
    The architecture consists of up to five components with a constrained
    communication topology. The permitted data flows are defined as
@@ -421,10 +575,10 @@ Table of Contents
 
    The capability manifest MUST declare, at minimum: the set of
    permitted action types, per-action scope constraints, and actor
-   bindings (see actor_bindings field below and Section 7 for CMI
+   bindings (see actor_bindings field below and Section 8 for CMI
    extension). The manifest
    format is implementation-defined but MUST be included in the
-   integrity record (Section 8).
+   integrity record (Section 7).
 
    At minimum, the manifest MUST contain the following fields:
    o  action_types: An enumeration of permitted action categories
@@ -488,7 +642,7 @@ Table of Contents
    verifiable and version-tagged. In multi-system deployments using
    [HACA-CMI], CPE outputs that cross node boundaries are additionally
    wrapped in a Message Envelope (cryptographically signed, per
-   [HACA-CMI] Section 7.1). The Intention Envelope and Message
+   [HACA-CMI] Section 8.1). The Intention Envelope and Message
    Envelope are complementary: the former governs CPE→EL handoff
    within a node; the latter governs EL→CMI→network transmission.
 
@@ -518,6 +672,12 @@ Table of Contents
    Protocol (FAP) establishes the Operator as the trust anchor for
    the SIL itself; an Operator who does not actively monitor the SIL
    post-boot accepts the residual risk of undetected SIL compromise.
+   When the SIL must contact the Operator directly — for critical
+   escalation, capability approval, or authorized state export — it
+   does so exclusively via the Operator Channel (Section 2). This
+   design ensures that the CPE, which may itself be the source of an
+   anomaly, is never on the escalation path between the SIL and the
+   Operator.
 
    The SIL operates as an active verifier (pull model): it initiates
    all integrity checks, drift probes, and sandbox verifications on
@@ -526,133 +686,146 @@ Table of Contents
    changes occur. The verification frequency is implementation-defined
    and MUST be documented in the compliance statement.
 
-4.  Document Hierarchy
+5.  First Activation Protocol (FAP): Imprint and Endure
 
-   HACA is a family of specifications with a defined authority
-   hierarchy. This section defines the scope and relationships
-   between all HACA documents.
+   The First Activation Protocol is the singular, unrepeatable event
+   of an Entity's initial self-constitution. It is distinct from the
+   Boot Sequence (Section 6.4), which restores an already-existing
+   Entity from MIL state. The FAP runs exactly once in an Entity's
+   lifetime. After successful FAP completion, all subsequent startups
+   follow the Boot Sequence.
 
-   4.1. HACA-Arch (This Document)
+   The FAP is the moment the Entity acquires a self-model: it
+   establishes the genesis Omega vector (the initial Persona), records
+   the Operator trust anchor, and writes the first Integrity Record
+   (Section 7) to the MIL. The resulting cryptographic anchor is the
+   root of all subsequent identity continuity claims.
 
-   The root specification. Defines:
-   o  Abstract architecture and topology (Section 3)
-   o  Trust model and sovereignty model (Section 5)
-   o  Integrity record format (Section 8)
-   o  Compliance levels and certification (Section 9)
-   o  Relationships between all HACA specifications (this section)
+5.1. Conceptual Foundation
 
-   Does NOT define cognitive algorithms, processing invariants,
-   security hardening, or implementation-specific mechanisms.
+   Two foundational concepts are established by the FAP and govern
+   the Entity's entire lifecycle:
 
-   4.2. HACA-Core (Cognitive Profile: Autonomous)
+   o  Imprint: The act of writing the genesis Omega vector to the MIL
+      for the first time. Imprint is irreversible. The genesis Omega
+      is the cryptographic root against which all future identity
+      continuity is measured. An Entity that cannot produce a valid
+      chain of integrity records back to its genesis Imprint MUST NOT
+      claim identity continuity with the original Entity.
 
-   Defined in draft-orrico-haca-core-07. Specifies:
-   o  Formal axioms of cognitive compliance (stateless CPE, MIL
-      primacy, mediated boundary, deterministic boot, recovery,
-      atomic transactions, active confinement, identity drift)
-   o  Semantic drift measurement and remediation (Unigram NCD)
-   o  Identity update protocol
-   o  Core fault taxonomy and compliance tests (T1-T7)
+   o  Endure: The commitment to preserve identity continuity across
+      all subsequent operational cycles, including host migration,
+      context resets, and hardware changes. Endure is not a static
+      preservation (as in HACA-Core's immutable identity model) nor
+      unrestricted change — it is the constraint that all future
+      state, whether stable or evolved, remains traceable to the
+      genesis Imprint through an unbroken chain of validated
+      transitions.
 
-   HACA-Core operates within the structural and trust framework
-   defined by HACA-Arch. It MUST NOT redefine topology, trust
-   levels, or compliance certification defined here.
+   These two concepts are not optional extensions: they are structural
+   invariants of the HACA architecture. Any Cognitive Profile MUST
+   implement both Imprint and Endure as part of its FAP.
 
-   4.3. HACA-Symbiont (Cognitive Profile: Symbiont)
+5.2. Universal FAP Requirements
 
-   Defined in draft-orrico-haca-symbiont-03. Specifies:
-   o  Formal axioms of cybernetic symbiosis (ontogeny, obligate
-      mutualism, identity topology, cognitive duality, MIL
-      primacy, distributed conatus)
-   o  Tiered memory metabolism (Episodic Buffer, Semantic
-      Compression, Core Integration, MIL Compaction)
-   o  Endure Protocol: evolutionary identity checkpoints
-   o  Heartbeat Protocol: autonomic health monitoring,
-      graded fault responses, and Operator Re-binding Recovery
-   o  Symbiotic Contract: host compliance interfaces and DSS mapping
-   o  Fault State Taxonomy and Compliance Tests (TS1-TS6)
+   Regardless of Cognitive Profile, all HACA implementations MUST
+   satisfy the following invariants during FAP:
 
-   HACA-Symbiont operates within the structural framework defined
-   by HACA-Arch. It MUST NOT redefine topology or compliance
-   certification defined here. HACA-Symbiont and HACA-Core are
-   mutually exclusive: an implementation MUST NOT claim compliance
-   with both simultaneously.
+   a) Genesis Omega: The system MUST construct the initial Omega
+      vector from its base specification (persona definition, axiom
+      set, and Operator trust anchor). No prior MIL state exists at
+      this point.
 
-   Note on Profile Axiom Structures: HACA-Core defines 8 axioms
-   (I through VIII) and HACA-Symbiont defines 6 axioms (I through
-   VI). These axiom sets are independent and intentionally non-
-   parallel: they reflect fundamentally different cognitive contracts
-   (Zero-Trust autonomous vs. High-Trust symbiotic). The axiom
-   numbering overlaps by design — HACA-Core Axiom I and HACA-Symbiont
-   Axiom I share the same ordinal but govern different properties.
-   Implementers MUST NOT assume numeric correspondence between axioms
-   of different profiles. The shared structural invariants are
-   governed by HACA-Arch, not by the axiom sets of either profile.
+   b) Operator Provisioning: The Operator trust anchor MUST be
+      established and written to the MIL during FAP. The format and
+      cryptographic algorithm are profile-defined, but the anchor
+      MUST be present before FAP completes.
 
-   4.4. HACA-Security
+   c) Integrity Record Genesis: The system MUST produce the first
+      Integrity Record (Section 7) and write it to the MIL. This
+      record constitutes the genesis Imprint and anchors all future
+      identity continuity claims.
 
-   Defined in draft-orrico-haca-security-04. Specifies:
-   o  Byzantine host model and threat taxonomy
-   o  Cryptographic auditability (hash-linked logs)
-   o  Temporal attack detection
-   o  Hardened trust model (elevating HACA-Arch Section 5.1)
-   o  Security fault taxonomy and compliance tests (T8-T12)
+   d) Boot Completion Handoff: On successful FAP completion, the SIL
+      MUST write a FAP completion marker to the MIL. All subsequent
+      startups MUST detect this marker and follow the Boot Sequence
+      (Section 6.4) rather than re-running FAP.
 
-   HACA-Security is a profile-agnostic extension: it applies to
-   any deployment regardless of which Cognitive Profile is active.
-   It extends but MUST NOT contradict the trust model defined in
-   Section 5. It MUST NOT redefine cognitive invariants defined
-   in the active Cognitive Profile.
+   e) Irreversibility: FAP MUST NOT be re-run on a system that
+      already has a genesis Integrity Record in the MIL. Any attempt
+      to overwrite the genesis Imprint MUST be rejected by the SIL
+      and treated as a Consistency Fault.
 
-   4.5. HACA-CMI
+   f) Omega Runtime Immutability: At runtime, the active Omega MUST
+      NOT be modifiable by any external instruction, regardless of
+      source — including instructions from the Operator. Omega MAY
+      only be altered by profile-defined internal processes validated
+      by the SIL: for HACA-Core, via the Endure Protocol executed
+      exclusively between boot cycles (HACA-Core Section 6);
+      for HACA-Symbiont, via Tier 3 integration through the Endure
+      Protocol (HACA-Symbiont Section 6). This invariant is the
+      architectural enforcement of Imprint: no runtime actor may
+      overwrite the genesis anchor or any subsequent validated state.
 
-   Specified in [HACA-CMI] (draft-orrico-haca-cmi-01). Defines:
-   o  Multi-system coordination protocol and wire format
-   o  Peer discovery (Bootstrap and Organic Introduction)
-   o  Two-plane session model (Coordination Plane / Communication Plane)
-   o  Federated memory exchange via Session Commit
-   o  Mesh fault taxonomy and compliance tests
+   g) Entity Artifact Boundary (entity_root/): Every Cognitive
+      Profile MUST define a canonical entity root directory
+      (entity_root/) that contains all artifacts governed by the
+      Endure Protocol: persona definition, skill set, lifecycle
+      hooks, integrity record, and any other files whose hash
+      appears in the genesis Imprint or any subsequent Integrity
+      Record. The following invariants apply universally:
 
-   HACA-CMI is a profile-agnostic extension applicable to any
-   deployment regardless of active Cognitive Profile.
+      1. Any version-control operation (commit, push, merge) that
+         modifies files within entity_root/ is an Endure event and
+         MUST be executed exclusively through the active profile's
+         Endure Protocol. It MUST NOT be executed as a side-effect
+         of project or workspace operations.
 
-   4.6. Authority and Precedence
+      2. Any version-control operation on files outside
+         entity_root/ (project code, workspace, external
+         repositories) is a project operation and MUST NOT be
+         treated as an Endure event, regardless of the content of
+         the changes.
 
-   In case of conflict between specifications:
-   1. HACA-Arch takes precedence over all other HACA documents.
-   2. HACA-Core and HACA-Symbiont are mutually exclusive peer
-      Cognitive Profiles, both subordinate to HACA-Arch. Because
-      they govern disjoint deployments, conflicts between them
-      do not arise in practice. Should an ambiguity be identified
-      in a shared abstraction, it MUST be resolved by amendment
-      to HACA-Arch.
-   3. HACA-Security and HACA-CMI are extensions subordinate to
-      HACA-Arch. Neither may contradict HACA-Arch or the active
-      Cognitive Profile.
+      3. An Entity operating on a project MUST maintain an
+         unambiguous internal model of the active working context:
+         entity_root/ or project workspace. Conflating a project
+         commit with an Endure commit is a Consistency Fault
+         (HACA-Core Axiom VIII / HACA-Symbiont Axiom V).
 
-   Profile Permanence: Profile selection is permanent for the
-   lifetime of an Entity. No migration protocol between HACA-Core
-   and HACA-Symbiont is defined; an implementation that changes its
-   declared Cognitive Profile MUST be treated as a new Entity with
-   no continuity from the previous deployment.
+      This boundary exists to prevent inadvertent self-modification
+      during normal task execution and to ensure that the Entity
+      can never be socially engineered into committing to its own
+      identity under the pretense of project work.
 
-   HACA-Security MAY elevate SHOULD-level requirements from
-   HACA-Arch to MUST-level for hardened deployments (e.g.,
-   HACA-Arch Section 5.1.1 message integrity is RECOMMENDED;
-   HACA-Security Section 4.2 elevates it to REQUIRED). Such
-   elevations MUST NOT weaken any existing MUST-level requirement.
+5.3. Profile-Specific Implementations
 
-   Version Independence: Each HACA specification is versioned
-   independently (e.g., HACA-Arch v1.0 may coexist with HACA-Core
-   v1.1). Each specification MUST declare in its header the minimum
-   required version of its dependencies (e.g., HACA-Core v1.1
-   requires HACA-Arch >= v1.0). The integrity record (Section 8)
-   includes the haca_version field for the root protocol version;
-   implementations SHOULD additionally record the version of each
-   companion specification in use to enable compatibility verification
-   at boot.
+   The universal requirements of Section 5.2 are implemented
+   differently by each Cognitive Profile:
 
-5.  Trust Model
+   o  HACA-Core (draft-orrico-haca-core-07, Section 5.10): The FAP
+      establishes a static, immutable Omega. The Operator trust anchor
+      is provisioned as a cryptographic key. The genesis Imprint is
+      the permanent identity anchor. Endure is implemented as the
+      Operator-driven, out-of-band Endure Protocol (HACA-Core
+      Section 5): the running Entity does not participate in identity
+      updates; it validates the Operator-provided result at next boot.
+      Drift from the genesis Imprint is a Consistency Fault.
+
+   o  HACA-Symbiont (draft-orrico-haca-symbiont-03, Axiom I and
+      Section 5.1): The FAP establishes an evolvable Omega (the
+      "Law of Ontogeny"). The Operator trust anchor is provisioned as
+      a cryptographic binding. The genesis Imprint is the root anchor,
+      but subsequent controlled mutations via the Endure Protocol
+      (HACA-Symbiont Section 6) are permitted and expected. Identity
+      continuity is maintained through the chain of Ontological
+      Snapshots, not through immutability.
+
+   Both profiles share the same structural contract: the genesis
+   Imprint is inviolable, and all identity claims MUST trace back to
+   it through an unbroken, verifiable chain.
+
+6.  Trust Model
 
    HACA-Arch defines the baseline trust model for the architecture.
    HACA-Security extends this model for adversarial environments.
@@ -690,7 +863,7 @@ Table of Contents
    without the full cryptographic overhead of HACA-Security. For
    adversarial environments, HACA-Security Section 4.2 elevates
    sequence counters from SHOULD to MUST with 64-bit counters and
-   replay detection, and Section 6 adds mandatory temporal attack
+   replay detection, and Section 5 adds mandatory temporal attack
    detection with cryptographic enforcement.
 
    5.1.2. Trust Model Extensions for Multi-System Deployments
@@ -742,7 +915,7 @@ Table of Contents
       anchor (e.g., a signed hash, operator-provided checksum).
    o  The CPE's behavioral output is within the drift or health
       tolerance defined by the active Cognitive Profile (HACA-Core
-      Axiom VIII; HACA-Symbiont Axiom VI and Section 7).
+      Axiom VIII; HACA-Symbiont Axiom VI and Section 8).
    If either condition is violated, the system MUST enter a Halted
    state and signal an Integrity Fault.
 
@@ -782,12 +955,12 @@ Table of Contents
    Section 5.10; HACA-Symbiont Axiom I), which establishes operator
    binding and identity consolidation before the trust model can be
    fully operational. Until FAP completes, the Operator trust anchor
-   defined in Section 5 is provisionally absent, and the system MUST
+   defined in Section 6 is provisionally absent, and the system MUST
    restrict itself to FAP interactions only.
 
    5.4.1. SIL Anchor Defense (Semi-Trusted Model Limitation)
 
-   In the semi-trusted host model (Section 5.1), the "known anchor"
+   In the semi-trusted host model (Section 6.1), the "known anchor"
    for SIL integrity verification (step 1 above) typically resides
    on the Host. This creates a vulnerability: a faulty or compromised
    Host could modify both the integrity record AND the anchor itself,
@@ -886,7 +1059,7 @@ Table of Contents
       enter a degraded mode (disable autonomous operation, allow
       operator-initiated queries only) when budgets are exhausted.
    o  Profile-specific verification invocations (drift probes per
-      HACA-Core Section 5; Heartbeat pulses per HACA-Symbiont
+      HACA-Core Section 6; Heartbeat pulses per HACA-Symbiont
       Section 7) SHOULD be accounted separately from operational
       CPE usage to prevent verification cycles from exhausting
       operational budgets.
@@ -898,169 +1071,10 @@ Table of Contents
    statement and warn operators of the risk of runaway resource
    consumption in production deployments.
 
-6.  First Activation Protocol (FAP): Imprint and Endure
-
-   The First Activation Protocol is the singular, unrepeatable event
-   of an Entity's initial self-constitution. It is distinct from the
-   Boot Sequence (Section 5.4), which restores an already-existing
-   Entity from MIL state. The FAP runs exactly once in an Entity's
-   lifetime. After successful FAP completion, all subsequent startups
-   follow the Boot Sequence.
-
-   The FAP is the moment the Entity acquires a self-model: it
-   establishes the genesis Omega vector (the initial Persona), records
-   the Operator trust anchor, and writes the first Integrity Record
-   (Section 8) to the MIL. The resulting cryptographic anchor is the
-   root of all subsequent identity continuity claims.
-
-6.1. Conceptual Foundation
-
-   Two foundational concepts are established by the FAP and govern
-   the Entity's entire lifecycle:
-
-   o  Imprint: The act of writing the genesis Omega vector to the MIL
-      for the first time. Imprint is irreversible. The genesis Omega
-      is the cryptographic root against which all future identity
-      continuity is measured. An Entity that cannot produce a valid
-      chain of integrity records back to its genesis Imprint MUST NOT
-      claim identity continuity with the original Entity.
-
-   o  Endure: The commitment to preserve identity continuity across
-      all subsequent operational cycles, including host migration,
-      context resets, and hardware changes. Endure is not a static
-      preservation (as in HACA-Core's immutable identity model) nor
-      unrestricted change — it is the constraint that all future
-      state, whether stable or evolved, remains traceable to the
-      genesis Imprint through an unbroken chain of validated
-      transitions.
-
-   These two concepts are not optional extensions: they are structural
-   invariants of the HACA architecture. Any Cognitive Profile MUST
-   implement both Imprint and Endure as part of its FAP.
-
-6.2. Universal FAP Requirements
-
-   Regardless of Cognitive Profile, all HACA implementations MUST
-   satisfy the following invariants during FAP:
-
-   a) Genesis Omega: The system MUST construct the initial Omega
-      vector from its base specification (persona definition, axiom
-      set, and Operator trust anchor). No prior MIL state exists at
-      this point.
-
-   b) Operator Provisioning: The Operator trust anchor MUST be
-      established and written to the MIL during FAP. The format and
-      cryptographic algorithm are profile-defined, but the anchor
-      MUST be present before FAP completes.
-
-   c) Integrity Record Genesis: The system MUST produce the first
-      Integrity Record (Section 8) and write it to the MIL. This
-      record constitutes the genesis Imprint and anchors all future
-      identity continuity claims.
-
-   d) Boot Completion Handoff: On successful FAP completion, the SIL
-      MUST write a FAP completion marker to the MIL. All subsequent
-      startups MUST detect this marker and follow the Boot Sequence
-      (Section 5.4) rather than re-running FAP.
-
-   e) Irreversibility: FAP MUST NOT be re-run on a system that
-      already has a genesis Integrity Record in the MIL. Any attempt
-      to overwrite the genesis Imprint MUST be rejected by the SIL
-      and treated as a Consistency Fault.
-
-   f) Omega Runtime Immutability: At runtime, the active Omega MUST
-      NOT be modifiable by any external instruction, regardless of
-      source — including instructions from the Operator. Omega MAY
-      only be altered by profile-defined internal processes validated
-      by the SIL: for HACA-Core, via the Endure Protocol executed
-      exclusively between boot cycles (HACA-Core Section 6);
-      for HACA-Symbiont, via Tier 3 integration through the Endure
-      Protocol (HACA-Symbiont Section 6). This invariant is the
-      architectural enforcement of Imprint: no runtime actor may
-      overwrite the genesis anchor or any subsequent validated state.
-
-   g) Entity Artifact Boundary (entity_root/): Every Cognitive
-      Profile MUST define a canonical entity root directory
-      (entity_root/) that contains all artifacts governed by the
-      Endure Protocol: persona definition, skill set, lifecycle
-      hooks, integrity record, and any other files whose hash
-      appears in the genesis Imprint or any subsequent Integrity
-      Record. The following invariants apply universally:
-
-      1. Any version-control operation (commit, push, merge) that
-         modifies files within entity_root/ is an Endure event and
-         MUST be executed exclusively through the active profile's
-         Endure Protocol. It MUST NOT be executed as a side-effect
-         of project or workspace operations.
-
-      2. Any version-control operation on files outside
-         entity_root/ (project code, workspace, external
-         repositories) is a project operation and MUST NOT be
-         treated as an Endure event, regardless of the content of
-         the changes.
-
-      3. An Entity operating on a project MUST maintain an
-         unambiguous internal model of the active working context:
-         entity_root/ or project workspace. Conflating a project
-         commit with an Endure commit is a Consistency Fault
-         (HACA-Core Axiom VIII / HACA-Symbiont Axiom V).
-
-      This boundary exists to prevent inadvertent self-modification
-      during normal task execution and to ensure that the Entity
-      can never be socially engineered into committing to its own
-      identity under the pretense of project work.
-
-6.3. Profile-Specific Implementations
-
-   The universal requirements of Section 6.2 are implemented
-   differently by each Cognitive Profile:
-
-   o  HACA-Core (draft-orrico-haca-core-07, Section 5.10): The FAP
-      establishes a static, immutable Omega. The Operator trust anchor
-      is provisioned as a cryptographic key. The genesis Imprint is
-      the permanent identity anchor. Endure is implemented as the
-      Operator-driven, out-of-band Endure Protocol (HACA-Core
-      Section 6): the running Entity does not participate in identity
-      updates; it validates the Operator-provided result at next boot.
-      Drift from the genesis Imprint is a Consistency Fault.
-
-   o  HACA-Symbiont (draft-orrico-haca-symbiont-03, Axiom I and
-      Section 6.1): The FAP establishes an evolvable Omega (the
-      "Law of Ontogeny"). The Operator trust anchor is provisioned as
-      a cryptographic binding. The genesis Imprint is the root anchor,
-      but subsequent controlled mutations via the Endure Protocol
-      (HACA-Symbiont Section 6) are permitted and expected. Identity
-      continuity is maintained through the chain of Ontological
-      Snapshots, not through immutability.
-
-   Both profiles share the same structural contract: the genesis
-   Imprint is inviolable, and all identity claims MUST trace back to
-   it through an unbroken, verifiable chain.
-
-7.  Multi-System Extension Point (CMI)
-
-   HACA-Arch is designed for single-system deployments as the base
-   case. Multi-system coordination (Cognitive Mesh) is defined in
-   [HACA-CMI].
-
-   To ensure forward compatibility, HACA-compliant implementations
-   MUST satisfy the following structural requirements:
-
-   o  The MIL MUST support logical partitioning by namespace, so that
-      a future CMI layer can isolate per-system state.
-   o  The HACA topology MUST support multiple instantiation: each
-      system in a mesh operates its own CPE, MIL, EL, and SIL.
-   o  The EL's capability manifest MUST support actor-scoped
-      permissions (RBAC), even if only a single actor is defined.
-
-   Single-system implementations MAY use a single default namespace
-   and a single actor. No CMI-specific logic is required for
-   compliance with any Cognitive Profile.
-
-8.  Integrity Record Format
+7.  Integrity Record Format
 
    The integrity record is referenced throughout the HACA
-   specifications (HACA-Core Axioms IV and VII; Section 5.4 of this
+   specifications (HACA-Core Axioms IV and VII; Section 6.4 of this
    document; and HACA-Core Section 5) but its concrete format is
    implementation-defined.
 
@@ -1098,6 +1112,26 @@ Table of Contents
    (e.g., signing timestamps, operator identity, key identifiers)
    but MUST NOT omit the mandatory fields above.
 
+8.  Multi-System Extension Point (CMI)
+
+   HACA-Arch is designed for single-system deployments as the base
+   case. Multi-system coordination (Cognitive Mesh) is defined in
+   [HACA-CMI].
+
+   To ensure forward compatibility, HACA-compliant implementations
+   MUST satisfy the following structural requirements:
+
+   o  The MIL MUST support logical partitioning by namespace, so that
+      a future CMI layer can isolate per-system state.
+   o  The HACA topology MUST support multiple instantiation: each
+      system in a mesh operates its own CPE, MIL, EL, and SIL.
+   o  The EL's capability manifest MUST support actor-scoped
+      permissions (RBAC), even if only a single actor is defined.
+
+   Single-system implementations MAY use a single default namespace
+   and a single actor. No CMI-specific logic is required for
+   compliance with any Cognitive Profile.
+
 9.  Compliance Levels and Verification
 
    9.1. Overview
@@ -1131,7 +1165,7 @@ Table of Contents
       (defined in HACA-CMI).
 
    Note: Implementations using Opaque CPE providers MUST use
-   HACA-Symbiont. See HACA-Arch Section 3.3.1 for the normative
+   HACA-Symbiont. See HACA-Arch Section 4.3.1 for the normative
    profile-topology binding rules.
 
    9.3. Operational Modes (Transparent CPE)
@@ -1160,21 +1194,27 @@ Table of Contents
    validation MUST NOT weaken the fault response requirements
    defined in HACA-Core Section 7.
 
-   9.3.2. Raw Inference Mode (Internal Sandbox)
+   9.3.2. Raw Inference Mode (Persona Bypass)
 
-   Transparent CPE implementations MAY provide a bypass mechanism
-   for non-personified logic processing, acting as an internal
-   reasoning sandbox:
+   Transparent CPE implementations MAY provide a Persona Bypass
+   mechanism for non-personified logic processing, acting as an
+   internal reasoning sandbox:
 
-   a) Mechanism: The system queries the CPE without injecting the
-      Persona ($\Omega$) constraints, allowing unconstrained
-      logical reasoning on complex or adversarial inputs.
-   b) Output Handling: Outputs produced in Raw Inference Mode MUST
-      be reviewed and filtered through the standard Persona context
-      by the SIL before any result is committed to the MIL or
-      forwarded to the EL. Raw outputs are transient scratch state
-      and MUST NOT be persisted directly.
-   c) Restriction: Raw Inference Mode is STRICTLY RESTRICTED to
+   a) Mechanism: The CPE suppresses the active Persona ($\Omega$)
+      and invokes the model directly in raw inference mode —
+      without identity constraints, without persona context, and
+      without any input beyond what the CPE explicitly provides.
+   b) Output Handling: The result of a Persona Bypass invocation
+      is returned exclusively to the CPE and MUST NOT leave it
+      directly. What the CPE does with that result follows the
+      normal cognitive flow: it may inform a decision, shape a
+      response, or be discarded. Any downstream action or state
+      write that results from CPE processing of a raw inference
+      output is subject to the standard SIL validation and EL
+      mediation invariants. Raw outputs are transient scratch
+      state internal to the CPE and MUST NOT be persisted directly
+      to the MIL or forwarded to the EL without CPE mediation.
+   c) Restriction: The Persona Bypass is STRICTLY RESTRICTED to
       Transparent CPE environments. Enabling it on an Opaque CPE
       would expose unfiltered inference outputs through a channel
       the system cannot fully verify, violating the Mediated
@@ -1185,15 +1225,15 @@ Table of Contents
    HACA-Arch defines the structural framework within which security
    mechanisms operate. The security properties of this document are:
 
-   o  The trust model (Section 5) establishes baseline integrity
+   o  The trust model (Section 6) establishes baseline integrity
       verification but does NOT protect against deliberately
       malicious hosts. For adversarial environments, HACA-Security
       (draft-orrico-haca-security-04) is REQUIRED.
-   o  The SIL is an axiomatic root of trust (Section 3.6). Its
+   o  The SIL is an axiomatic root of trust (Section 4.6). Its
       compromise defeats all architectural guarantees.
-   o  The integrity record (Section 8) provides tamper detection
+   o  The integrity record (Section 7) provides tamper detection
       for immutable components but relies on the anchor mechanism
-      (Section 5.4.1) for its own integrity.
+      (Section 6.4.1) for its own integrity.
 
    Implementations MUST consult HACA-Security for comprehensive
    threat analysis and hardening requirements.
@@ -1214,7 +1254,7 @@ Table of Contents
    12.1. Resource Governance Defaults
 
    The following defaults are suggested starting points for the
-   governance mechanisms described in Section 5.6:
+   governance mechanisms described in Section 6.6:
 
    o  EL rate limiting:
       - Per-skill: 10 invocations per minute per skill.
@@ -1244,7 +1284,7 @@ Table of Contents
    The following is one possible serialization of an integrity record
    using JSON as the storage format. The serialization format is
    implementation-defined; XML, binary, TOML, or any other structured
-   format that satisfies the requirements in Section 8 is equally valid.
+   format that satisfies the requirements in Section 7 is equally valid.
 
    {
      "format_version": "1.0",
@@ -1269,7 +1309,7 @@ Table of Contents
    12.4. SIL Anchor Example
 
    For a filesystem-based implementation using operator-provided
-   checksum (Section 5.4.1):
+   checksum (Section 6.4.1):
 
    o  The operator computes the integrity record hash and provides
       it via environment variable at boot time.
