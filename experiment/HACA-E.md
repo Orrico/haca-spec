@@ -87,7 +87,7 @@ The **Genesis Omega** is the cryptographic digest of the entity's verified ident
 
 Cognition is the processing cycle in which the entity receives a stimulus, generates intent, and produces actions or state writes. It is active only while a valid **session token** exists — the operational credential that authorizes active cognition, issued at the start of each session and revocable at any point. The entity's reasoning is produced by the CPE through the interaction of two inputs: the persona layer, which applies behavioral constraints, and the model, which performs inference. Both inputs are required; the output of the reasoning phase is a set of structured intent payloads.
 
-A **Session Cycle** is the end-to-end operational span — from session token validation to session close. It encompasses all Cognitive Cycles within it and the Sleep Cycle that follows session termination. Integrity monitoring operates continuously across the entire Session Cycle.
+A **Session Cycle** is the end-to-end operational span — from session token validation to session close. It encompasses all Cognitive Cycles within it and a maintenance window — the Sleep Cycle — that follows session termination. Integrity monitoring operates continuously across the entire Session Cycle.
 
 A **Cognitive Cycle** is the atomic unit of cognition: stimulus received → context loaded → intent generated → action executed → state persisted. A Cognitive Cycle is all-or-nothing — it either completes fully and commits its state, or it produces no persistent effect.
 
@@ -130,7 +130,7 @@ The **Heartbeat Protocol** runs asynchronously and continuously alongside active
 
 The value of `T` is defined at implementation time.
 
-The **Drift Framework** defines four categories of behavioral or structural deviation that the SIL monitors. The Genesis Omega is the cryptographic root against which all drift is ultimately referenced. Each Endure commit extends the integrity chain from that root. Each Cognitive Profile defines detection criteria, tolerance thresholds, and response procedures for each drift type.
+The **Drift Framework** defines four categories of behavioral or structural deviation that the SIL monitors. The Genesis Omega is the cryptographic root against which all drift is ultimately referenced. Each Endure commit extends the integrity chain from that root. Detection criteria, tolerance thresholds, and response procedures for each drift type are defined by the active profile specification.
 
 - **Inference Drift** — an intent payload produced by the CPE contradicts verified persisted state in the MIL. Detected per Cognitive Cycle during payload dispatch.
 - **Semantic Drift** — accumulated memory content has diverged from the entity's identity baseline. Detected per Sleep Cycle during memory consolidation.
@@ -139,13 +139,13 @@ The **Drift Framework** defines four categories of behavioral or structural devi
 
 ### 2.5 Individuation
 
-Individuation is the initialization process that produces a unique, Operator-bound entity instance with a verifiable identity record. It occurs exactly once per entity, during the First Activation Protocol.
+Individuation is the initialization process that produces a unique, Operator-bound entity instance with a verifiable identity record. It occurs exactly once per entity, during the entity's first activation — a one-time sequential bootstrap procedure defined at the end of this section as the **FAP**.
 
 The **Bound** is the persistent link between the entity and its Operator, established during first activation. The minimum required fields are the Operator's name and email address; implementations may extend this set but must not omit these two fields. A deterministic cryptographic digest of the Operator's identifying fields produces the **Operator Hash** — the entity's permanent identifier for its bound Operator. The Bound can only be dissolved or transferred by explicit Operator authorization.
 
 **Imprint** is the initialization event that establishes the entity's identity. It executes exactly once, during the first boot in which the Memory Store is empty. During Imprint: the persona is instantiated from the profile template, the Operator Bound is established, the Imprint Record is written to the Memory Store, and the Integrity Document is generated. The Genesis Omega — the cryptographic digest of the Imprint Record — is derived and stored as the root node of the integrity chain. The presence of the Imprint Record in the Memory Store is the definitive indicator that a valid entity instance exists. Re-executing Imprint on an entity with an existing Imprint Record is a protocol violation and must be rejected.
 
-The **Operator Channel** is the SIL's direct out-of-band communication path to the Operator. It is established during the FAP and remains available for the entity's entire lifecycle. Under normal operating conditions, Operator notifications may be routed through the CPE. In conditions where the CPE is the source of the anomaly — detected drift, reasoning failure, or integrity violation — the Operator Channel bypasses the CPE entirely. The Operator Channel is implemented as a direct signaling mechanism: a terminal prompt, an email notification, or any equivalent out-of-band channel. The specific mechanism is defined at implementation time; the requirement that it does not depend on the CPE is invariant.
+The **Operator Channel** is the SIL's direct out-of-band communication path to the Operator. It is established during first activation and remains available for the entity's entire lifecycle. Under normal operating conditions, Operator notifications may be routed through the CPE. In conditions where the CPE is the source of the anomaly — detected drift, reasoning failure, or integrity violation — the Operator Channel bypasses the CPE entirely. The Operator Channel is implemented as a direct signaling mechanism: a terminal prompt, an email notification, or any equivalent out-of-band channel. The specific mechanism is defined at implementation time; the requirement that it does not depend on the CPE is invariant.
 
 The **FAP** (First Activation Protocol) is the sequential bootstrap procedure that executes the Imprint. The FAP is not a Cognitive Cycle — no session token exists at this stage and the CPE reasoning layer is not active. The FAP executes as a gated sequential pipeline:
 
@@ -206,7 +206,7 @@ The entity's integrity monitoring and enforcement layer, and its highest interna
 
 The SIL receives health signals from every component, evaluates them against defined integrity criteria, applies autonomous corrective actions when possible, and escalates to the Operator via the Operator Channel when the condition exceeds its correction authority. The SIL operates reactively by default and retains the authority to intervene proactively in predefined high-risk conditions. When escalating to the Operator, the SIL uses the Operator Channel directly — bypassing the CPE — because the CPE may be the source of the detected anomaly.
 
-The SIL is the sole issuer and custodian of the **session token** — the credential that authorizes active operation across all components. The SIL issues the first token at FAP completion and renews it at the start of each subsequent session. The SIL may revoke the token at any point; revocation is immediate and blocks all token-dependent component operations. The current token state is persisted by the MIL.
+The SIL is the sole issuer and custodian of the session token — the credential introduced in §2.2, which authorizes active operation across all components. The SIL issues the first token at FAP completion and renews it at the start of each subsequent session. The SIL may revoke the token at any point; revocation is immediate and blocks all token-dependent component operations. The current token state is persisted by the MIL.
 
 ### 3.5 CMI — Cognitive Mesh Interface *(optional)*
 
@@ -228,7 +228,7 @@ HACA defines three trust levels that govern component interactions and external 
 
 **Internal: Conditional** — components are trusted only when operating within their defined authority. The CPE is trusted when its output is within drift tolerance. The SIL is trusted when its integrity record has been verified against a known anchor. If either condition is violated, the entity must enter a halted state and escalate to the Operator.
 
-The authority hierarchy is invariant: **Operator > SIL > CPE**. The SIL contacts the Operator directly when the CPE may be compromised. No component can alter the Imprint Record or the Operator Binding without explicit Operator authorization.
+The authority hierarchy is invariant: **Operator > SIL > CPE**. The SIL contacts the Operator directly when the CPE may be compromised. No component can alter the Imprint Record or the Operator Bound without explicit Operator authorization.
 
 ---
 
