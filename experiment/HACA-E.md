@@ -48,6 +48,13 @@ HACA-Spec defines the shared structural topology through two axes: five foundati
    - 6.3 [Session Cycle](#63-session-cycle)
    - 6.4 [Sleep Cycle and Maintenance](#64-sleep-cycle-and-maintenance)
    - 6.5 [Decommission](#65-decommission)
+7. [Security Considerations](#7-security-considerations)
+   - 7.1 [Structural Guarantees](#71-structural-guarantees)
+   - 7.2 [Prompt Injection](#72-prompt-injection)
+   - 7.3 [Entity Store Tampering](#73-entity-store-tampering)
+   - 7.4 [Mesh Spoofing and Sybil Attacks](#74-mesh-spoofing-and-sybil-attacks)
+   - 7.5 [Scope Boundary](#75-scope-boundary)
+8. [Glossary](#8-glossary)
 
 ---
 
@@ -363,5 +370,132 @@ No two stages execute concurrently. The Sleep Cycle is the only window in which 
 Decommission is the permanent retirement of an entity. It requires explicit Operator authorization and consists of revoking the active session token — if a session is in progress — and destroying or archiving the Entity Store.
 
 Destruction of the Entity Store is irreversible: no integrity chain can be produced from a destroyed store, and no identity continuity claim survives it. Archiving the Entity Store preserves the integrity chain and all mnemonic records but leaves the entity inoperative until explicitly reactivated by an authorized Operator. Reactivation follows the Boot Sequence; it is not a cold-start.
+
+---
+
+## 7. Security Considerations
+
+This section identifies what HACA-Arch guarantees structurally, what it explicitly does not cover, and the residual risks that implementers must account for.
+
+### 7.1 Structural Guarantees
+
+HACA-Arch provides four structural security properties by construction:
+
+- **Identity continuity** — the Genesis Omega and the integrity chain ensure that any tampering with committed structural state is detectable at the next boot or Heartbeat Vital Check.
+- **Mediated execution** — no action reaches the host environment without passing through the two-gate authorization sequence (SIL manifest check → EXEC validation). Skills operate within declared capability boundaries and have no direct access to the Entity Store.
+- **Authority hierarchy** — the invariant Operator > SIL > CPE ensures that no internal component can elevate its own authority. The SIL bypasses the CPE when escalating to the Operator, preventing a compromised cognitive engine from intercepting integrity alerts.
+- **Cognitive Sovereignty** — no external entity may write directly to the local Entity Store. Peer-sourced content entering through the CMI requires SIL approval before it enters the local cognitive namespace.
+
+### 7.2 Prompt Injection
+
+The language model sits outside the deterministic trust perimeter. HACA-E mitigates prompt injection through structural boundaries — the persona layer constrains the cognitive engine's output, and intent payloads are validated by the integrity layer before dispatch — but it does not eliminate the risk. A sufficiently crafted stimulus may cause the model to produce intent payloads that are structurally valid but semantically adversarial. The authorization gates on execution reduce the blast radius of such payloads, but the model's interpretation of input is inherently outside the scope of architectural enforcement. Deployments in adversarial environments should combine HACA-Arch's structural controls with the hardened validation mechanisms defined in HACA-Security.
+
+### 7.3 Entity Store Tampering
+
+At rest, the entity is a set of passive files on a host-controlled medium. The host has physical write access to the Entity Store. HACA-Arch addresses this threat through the Integrity Document: any modification to a structural file is detected at the next boot verification or Heartbeat Vital Check, and the Boot Sequence aborts if the integrity record does not match. However, HACA-Arch does not prevent a malicious host from deleting or corrupting the Entity Store entirely before the next boot. Detection is not prevention. Deployments where the host cannot be assumed cooperative should apply the cryptographic protections and rollback mechanisms defined in HACA-Security, and maintain Operator-controlled backups of the Entity Store outside the host's write boundary.
+
+### 7.4 Mesh Spoofing and Sybil Attacks *(when CMI is active)*
+
+When the HACA-CMI extension is active, the entity participates in a network of peer nodes. This surface introduces two related threats. **Spoofing** — a peer presents a falsified identity to establish a trusted CMI session and submit adversarial content to the local entity. **Sybil attacks** — a single adversary operates multiple fake peer identities to skew shared knowledge spaces or manufacture consensus. HACA-Arch's structural defense is Cognitive Sovereignty: all peer-sourced content must pass SIL approval before entering the local cognitive namespace, and no peer may write directly to the local Entity Store. The protocols for peer identity verification, session authentication, and mesh fault taxonomy are defined in HACA-CMI; deployments requiring strong peer authentication should additionally apply the cryptographic peer verification mechanisms defined in HACA-Security.
+
+### 7.5 Scope Boundary
+
+HACA-Arch does not define cryptographic algorithms, key management, audit log formats, or concrete threat response procedures. These are the responsibility of the HACA-Security extension, which operates as a security overlay on top of any HACA-Arch-compliant deployment. HACA-Arch defines where security enforcement points exist; HACA-Security defines what runs at those points.
+
+The Operator is the custodian of the Entity Store and is responsible for the data governance, backup, and access control policies governing it. HACA-Arch establishes the Operator Bound and the authority hierarchy — it does not prescribe how the Operator secures their own access credentials or the storage medium.
+
+---
+
+## 8. Glossary
+
+All terms defined in this specification, in alphabetical order.
+
+**Action** — the execution of an intent payload by the execution layer. Each action is an isolated, stateless transaction scoped to a single declared skill.
+
+**Cognitive Cycle** — the atomic unit of cognition: stimulus received → context loaded → intent generated → action executed → state persisted. All-or-nothing: it either completes fully and commits its state, or produces no persistent effect.
+
+**Cognitive Profile** — a mutually exclusive, permanent operational contract selected at first activation. Determines the entity's autonomy model, memory architecture, and drift tolerance. HACA-Arch defines two profiles: HACA-Core and HACA-Evolve.
+
+**Cognitive Sovereignty** — the mesh invariant that no external entity may write directly to another entity's Entity Store. The mesh only offers; the entity always acts on itself.
+
+**CMI (Cognitive Mesh Interface)** — the optional component that enables the entity to communicate with peer entities, access shared knowledge spaces, and participate in a Cognitive Mesh. Activated by the HACA-CMI extension.
+
+**Consistency Fault** — the error produced by conflating the Entity Store with the project workspace — treating a project operation as an Endure event, or vice versa.
+
+**CPE (Cognitive Processing Engine)** — the primary processing unit and the boundary at which the language model is integrated into the entity's operational scope. Holds the active context window; retains no persistent state beyond the active session.
+
+**Crash Recovery** — the procedure for resuming after an uncontrolled host interruption. The entity resumes from the last Sleep Cycle boundary; any session progress not yet consolidated is discarded.
+
+**Drift Framework** — the four-category taxonomy of behavioral or structural deviation that the integrity layer monitors: Inference Drift, Semantic Drift, Identity Drift, and Evolutionary Drift.
+
+**Endure Protocol** — the sole authorized path for structural writes to the Entity Store. Executes only during a Sleep Cycle via a staged pipeline ending in an atomic commit.
+
+**Entity** — at rest, the complete contents of the Entity Store. At runtime, the operational boundary formed by the Entity Store, the loaded model, and the active Operator binding.
+
+**Entity Artifact Boundary** — the separation between the Entity Store (governed by Endure) and the project workspace (everything outside it). Conflating the two is a Consistency Fault.
+
+**Entity Store** — the persistent, portable, implementation-agnostic data store containing everything required to reconstruct the entity's operational state: identity, memories, skills, configurations, and execution history.
+
+**EXEC (Execution Layer)** — the entity's actuation layer and the sole component authorized to interact with the host environment. Stateless; executes skills packaged as discrete capability units.
+
+**FAP (First Activation Protocol)** — the one-time sequential bootstrap procedure that executes during cold-start: validates structure, captures the host environment, enrolls the Operator, initializes the Operator Channel, writes the Imprint Record, generates the Integrity Document, derives the Genesis Omega, and issues the first session token.
+
+**Genesis Omega** — the cryptographic digest of the entity's verified identity state at first activation. The root node of the entity's integrity chain; the reference anchor against which all drift is ultimately measured.
+
+**HACA-Core** — the zero-autonomy Cognitive Profile. Structural evolution requires explicit Operator instruction. Requires Transparent CPE topology.
+
+**HACA-Evolve** — the supervised-autonomy Cognitive Profile. The entity may initiate structural evolution within its current authorization scope. Supports both Transparent and Opaque CPE topologies.
+
+**Heartbeat Protocol** — the asynchronous, continuous monitoring mechanism. Increments a Pulse Counter on each completed Cognitive Cycle and executed action; triggers a Vital Check at threshold `T`. Maintains a parallel watchdog timer to detect execution stalls.
+
+**Imprint** — the one-time initialization event that establishes the entity's identity. Executes during the first boot with an empty Memory Store. Writes the Imprint Record, establishes the Operator Bound, generates the Integrity Document, and derives the Genesis Omega.
+
+**Imprint Record** — the persistent record written to the Memory Store during Imprint. Its presence is the definitive indicator that a valid entity instance exists.
+
+**Integrity Document** — the cryptographic baseline of the entity's structural state, generated at first activation. Contains the hash of every structural file across all components. Verified at every boot, before every skill execution, and at each Heartbeat Vital Check.
+
+**Intent** — the output of the cognitive engine's reasoning phase: one or more structured payloads addressed to specific components (execution layer, memory layer, or mesh interface). Validated by the integrity layer before dispatch.
+
+**`<internal_voice>`** — the CPE mechanism that sends content to the model in raw inference mode, suspending persona constraints for that specific call. Output is ephemeral and never leaves the CPE without passing through the persona layer.
+
+**Memory Store** — the long-term partition of the entity's memory: episodic records of past operations and semantic knowledge accumulated over time.
+
+**MIL (Memory Interface Layer)** — the entity's persistence layer and sole authoritative source of recorded state. Has exclusive write authority over mnemonic content. Does not interpret or evaluate stored data.
+
+**Mnemonic Content** — memory records and operational state written continuously by the memory layer during normal operation. Requires no additional authorization beyond normal MIL operation.
+
+**Omega** — the runtime operational state of the entity: the active configuration produced by the Entity Store, the loaded model, and the Operator binding operating together within a session. Strictly local; does not transfer or replicate.
+
+**Opaque CPE** — a CPE topology in which the cognitive environment is partially or fully managed by the host; inference parameters, system instructions, or context may be injected outside the entity's control.
+
+**Operator** — the human authority to whom the entity is bound. Defines the entity's maximum authorization scope. Without an active Operator binding, the entity suspends all intent generation.
+
+**Operator Bound** — the persistent link between the entity and its Operator, established during first activation. Can only be dissolved or transferred by explicit Operator authorization.
+
+**Operator Channel** — the integrity layer's direct out-of-band communication path to the Operator. Bypasses the cognitive engine entirely when the cognitive engine is the source of an anomaly.
+
+**Operator Hash** — the deterministic cryptographic digest of the Operator's identifying fields. The entity's permanent identifier for its bound Operator.
+
+**Persona** — the layer within the Entity Store that defines the entity's behavioral constraints, operational drives, and response characteristics. The primary differentiator between entities sharing the same inference model.
+
+**Session Cycle** — the end-to-end operational span from session token validation to session close, encompassing all Cognitive Cycles and followed by a Sleep Cycle.
+
+**Session Store** — the active-session partition of the entity's memory: current operational context and in-progress session data.
+
+**Session Token** — the operational credential that authorizes active cognition. Issued by the SIL at boot completion; revocable at any point. Revocation is immediate and halts all token-dependent operations.
+
+**SIL (System Integrity Layer)** — the entity's integrity monitoring and enforcement layer, and its highest internal authority. Sole custodian of the Integrity Document and sole issuer of the session token.
+
+**Skill** — a discrete, self-contained executable capability unit within the Entity Store, with a manifest declaring its identity, required permissions, and dependencies.
+
+**Sleep Cycle** — the post-session maintenance window that runs after every Session Cycle closes. Managed by the MIL; executes memory consolidation, garbage collection, and queued Endure commits sequentially.
+
+**Stimulus** — the input that initiates a Cognitive Cycle. Valid origins: direct Operator input, internal scheduled triggers, or inbound signals from peer entities (when the CMI is present).
+
+**Structural Content** — persona definitions, skill manifests, configurations, and behavioral parameters. Every structural write is an evolutionary event requiring explicit authorization and must pass through the Endure Protocol.
+
+**Transparent CPE** — a CPE topology in which the HACA layer has deterministic control over prompt boundaries, context window, and inference parameters. Required by HACA-Core.
+
+**Vital Check** — the integrity assessment triggered by the Heartbeat Protocol at threshold `T`. Produces one of three states: Nominal, Degraded, or Critical.
 
 ---
