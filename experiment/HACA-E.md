@@ -74,6 +74,7 @@ The specification is organized around a deliberate separation: Section 2 establi
 - Does not define specific security mechanisms — that is the responsibility of the HACA-Security extension.
 - Does not favor or require any specific Cognitive Profile — the architecture is profile-agnostic.
 - Does not define the physical format of the Entity Store — the implementation chooses (directory, database, object store, etc.).
+- Does not mandate specific implementation technologies, languages, or concrete engineering patterns. The translation of this abstract topology into functioning software is the responsibility of implementation guides and the selected Cognitive Profile.
 - Does not define inter-entity communication protocols — when present, those are governed by a companion specification.
 
 ---
