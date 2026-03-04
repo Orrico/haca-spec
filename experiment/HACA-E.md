@@ -154,7 +154,7 @@ The Entity Store contains two classes of content with distinct write semantics:
 The **Endure Protocol** is the sole authorized path for structural writes to the Entity Store. Any structural modification — skill addition, persona calibration, configuration update, behavioral correction — must pass through Endure. A structural write that bypasses Endure is an unauthorized mutation, regardless of its origin. Endure executes only during a Sleep Cycle, via a staged pipeline:
 
 ```
-staging → validation → snapshot → operation suspension → atomic commit → Integrity Document update → resumption
+staging → validation → snapshot → atomic commit (write lock) → Integrity Document update → resumption
 ```
 
 If any step from `atomic commit` onward fails, the snapshot is restored and the entity resumes from its last verified structural state. No partial structural evolution is externally visible at any point in the pipeline.
@@ -167,7 +167,7 @@ The **Heartbeat Protocol** runs asynchronously and continuously alongside active
 - **Degraded** — a localized anomaly is detected that falls within the integrity layer's autonomous correction capacity. A corrective action is applied; the entity continues operating during correction.
 - **Critical** — the anomaly exceeds the integrity layer's correction capacity, or the anomaly involves the cognitive engine or the integrity layer itself. The session token is immediately revoked; the integrity layer escalates directly to the Operator, bypassing the cognitive engine.
 
-The value of `T` is defined at implementation time.
+The value of `T` is defined at implementation time. The Pulse Counter alone is insufficient to detect execution stalls: a skill invoked through the execution layer may hang indefinitely, preventing any further cycle completion and blocking counter increment. The integrity layer therefore maintains a parallel watchdog timer — a time-absolute deadline associated with each active execution. If the deadline expires before the execution returns, the integrity layer treats the condition as a Critical state: the session token is revoked and the Operator is notified via the Operator Channel. The watchdog timeout value is defined at implementation time, independently of `T`.
 
 The **Drift Framework** defines four categories of behavioral or structural deviation that the integrity layer monitors. The Genesis Omega is the cryptographic root against which all drift is ultimately referenced. Each Endure commit extends the integrity chain from that root. Detection criteria, tolerance thresholds, and response procedures for each drift type are defined by the active profile specification.
 
@@ -287,11 +287,11 @@ Each concept defined in Section 3 is realized by a specific configuration of com
 
 **Entity** at rest is the Entity Store — a fully self-contained, portable data store that does not require any component to be active. **Omega** is the runtime operational state instantiated when the four core components are active within a session: the MIL provides the complete recorded history of the entity; the CPE holds the persona and active reasoning context; the EXEC provides actuation capacity; the SIL enforces structural and behavioral integrity. When the CMI is present, it extends the entity's operational reach into the mesh; Omega remains local.
 
-**Cognition** is realized across two flows by the CPE and the EXEC. The CPE drives the Cognitive Flow: it applies persona constraints to model inference, produces intent payloads, and routes them to target components. The EXEC drives the Execution Flow: it materializes action payloads as operations on the host environment. Together, the two flows constitute a complete operational cycle: the CPE produces intent; the EXEC produces effect.
+**Cognition** is realized across two flows by the CPE and the EXEC. The CPE drives the Cognitive Flow: it applies persona constraints to model inference, produces intent payloads, and routes them to target components. The EXEC drives the Execution Flow: it materializes action payloads as operations on the host environment. Together, the two flows constitute a complete operational cycle: the CPE produces intent; the EXEC produces effect. The entity has no direct perception of the host environment — every read from or write to the external world is initiated as an action payload routed explicitly to the EXEC.
 
 **Memory** is realized exclusively by the MIL. No other component writes persistent state. The MIL's two stores — the Session Store and the Memory Store — are the sole authoritative record of everything the entity has processed and learned.
 
-**Integrity** is realized by the SIL and the EXEC operating as two independent authorization gates on every skill execution. The EXEC initiates the sequence by requesting a manifest integrity check from the SIL. The SIL verifies structural integrity and returns a grant or denial. The EXEC applies its own validation as the second gate. Both gates must pass independently; neither substitutes for the other.
+**Integrity** is realized across three concurrent mechanisms. First, the SIL and the EXEC operate as two independent authorization gates on every skill execution: the EXEC requests a manifest integrity check from the SIL, which verifies structural integrity and returns a grant or denial; the EXEC applies its own validation as the second gate. Both gates must pass independently; neither substitutes for the other. Second, the SIL orchestrates the Heartbeat Protocol — continuously monitoring all components, evaluating health signals, and escalating to the Operator when anomalies exceed its correction authority. Third, structural evolution is realized jointly by the MIL and the SIL executing the Endure Protocol during the Sleep Cycle: the MIL commits the structural write atomically while the SIL updates the Integrity Document to extend the verified chain.
 
 **Individuation** is realized sequentially across all components during the FAP. The FAP is the only point in the entity's lifecycle where components initialize in strict dependency order rather than operating concurrently. The output of a completed FAP — the Imprint Record in the Memory Store and the Genesis Omega in the integrity chain — is the product of all components having completed their initialization stages in sequence.
 
@@ -332,6 +332,8 @@ Each gate must pass before the next executes. If any gate fails, the boot is abo
 The integrity record verification is the first and most critical gate: the SIL verifies the Integrity Document against a known anchor before trusting any other component. The execution confinement check verifies that the active CPE topology matches the declared profile requirement — a HACA-Core deployment that detects an Opaque CPE at this step must halt.
 
 A warm boot restores an existing entity from its last committed state. It does not re-execute Imprint, re-establish the Operator Bound, or alter the integrity chain. It is a resumption, not a reinitiation.
+
+**Crash recovery** follows the same Boot Sequence. If the host process was terminated abruptly — power loss, out-of-memory kill, or any uncontrolled interruption — the entity resumes from the last Sleep Cycle boundary: the last point at which both mnemonic consolidation and any pending Endure commit completed successfully. Any session progress accumulated after that boundary — Cognitive Cycles executed, actions logged, mnemonic writes not yet consolidated — is not recoverable and is discarded. The entity resumes with a clean session token and operates from the last verified state. No special recovery mode exists: the Boot Sequence is the recovery procedure.
 
 ### 6.3 Session Cycle
 
