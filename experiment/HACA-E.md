@@ -14,7 +14,7 @@ HACA (Host-Agnostic Cognitive Architecture) is a structural specification for co
 
 In HACA, the language model is infrastructure — a stateless inference engine external to the entity. The entity's persistent state resides entirely in the **Entity Store**, an implementation-agnostic data store owned and controlled by the Operator. Migrating the Entity Store to a different host, with any compatible inference engine, fully restores the entity to its last verified state.
 
-HACA-Spec defines the shared structural topology through two axes: five foundational concepts that specify what a HACA-compliant entity is (Entity, Cognition, Memory, Integrity, Individuation), and five structural components that specify how it operates (CPE, MIL, EXEC, SIL, CMI). It also defines two Cognitive Profiles in Section 2.6 that establish the operational contract under which an entity runs. HACA does not define cognitive algorithms, security mechanisms, storage formats, or wire protocols — those are the responsibility of the Cognitive Profiles and optional extensions.
+HACA-Spec defines the shared structural topology through two axes: five foundational concepts that specify what a HACA-compliant entity is (Entity, Cognition, Memory, Integrity, Individuation), and five structural components that specify how it operates (Cognitive Processing Engine, Memory Interface Layer, Execution Layer, System Integrity Layer, Cognitive Mesh Interface). It also defines two Cognitive Profiles in Section 2.6 that establish the operational contract under which an entity runs. HACA does not define cognitive algorithms, security mechanisms, storage formats, or wire protocols — those are the responsibility of the Cognitive Profiles and optional extensions.
 
 ---
 
