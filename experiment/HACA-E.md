@@ -126,6 +126,8 @@ A **Session Cycle** is the end-to-end operational span — from session token va
 
 A **Cognitive Cycle** is the atomic unit of cognition: stimulus received → context loaded → intent generated → action executed → state persisted. A Cognitive Cycle is all-or-nothing — it either completes fully and commits its state, or it produces no persistent effect.
 
+Each Cognitive Cycle is driven by three elements: the stimulus that initiates it, the intent it produces, and the actions it executes.
+
 A **stimulus** initiates a Cognitive Cycle. Valid stimulus origins are: direct Operator input, internal scheduled triggers, or — when the cognitive mesh is present — inbound signals from peer entities. A stimulus received without an active session token is queued and processed when a token is issued.
 
 **Intent** is the output of the cognitive engine's reasoning phase — one or more structured payloads, each addressed to a specific component: an action payload to the execution layer, a state-write payload to the memory layer, or — when the cognitive mesh interface is present — an outbound message payload. Before dispatch, each payload is validated by the integrity layer against verified persisted state. Payloads that constitute drift are discarded and logged. The drift taxonomy is defined in §3.4.
@@ -136,7 +138,7 @@ An **action** is the execution of an intent payload by the execution layer. Each
 
 Memory is the entity's authoritative state store. It is partitioned into two stores: the **Session Store** — active session data and current operational context — and the **Memory Store** — episodic records of past operations and semantic knowledge accumulated over time. Both stores are managed exclusively by the memory layer.
 
-The memory layer does not interpret or evaluate stored data; it reads and writes on request. Memory consolidation — the transfer of session data into long-term episodic and semantic records — and garbage collection occur during the **Sleep Cycle**, a dedicated maintenance window executed between Session Cycles or triggered by an integrity event.
+The memory layer does not interpret or evaluate stored data; it reads and writes on request. Memory consolidation — the transfer of session data into long-term episodic and semantic records — and garbage collection occur during the **Sleep Cycle** — a dedicated post-session maintenance window that runs after every Session Cycle closes. The Sleep Cycle is detailed in §6.4.
 
 ### 3.4 Integrity
 
