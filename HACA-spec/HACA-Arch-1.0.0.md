@@ -54,7 +54,8 @@ HACA-Spec defines the shared structural topology through two axes: five foundati
    - 7.3 [Entity Store Tampering](#73-entity-store-tampering)
    - 7.4 [Mesh Spoofing and Sybil Attacks](#74-mesh-spoofing-and-sybil-attacks)
    - 7.5 [Scope Boundary](#75-scope-boundary)
-8. [Glossary](#8-glossary)
+8. [Theoretical Foundations](#8-theoretical-foundations)
+9. [Glossary](#9-glossary)
 
 ---
 
@@ -414,7 +415,37 @@ The Operator is the custodian of the Entity Store and is responsible for the dat
 
 ---
 
-## 8. Glossary
+## 8. Theoretical Foundations
+
+This architecture synthesizes established principles from cognitive science, distributed systems, and artificial immunology into a deterministic structure for language model-based entities.
+
+### 8.1 Cognitive Architectures (ACT-R and SOAR)
+HACA's strict separation between the stateless reasoning engine (the model) and the persistent state (the Entity Store) operationalizes the Von Neumann-like separation found in classical cognitive architectures like ACT-R and SOAR. Where ACT-R relies on manually authored procedural rules to drive condition-action cycles, HACA replaces this bottleneck with the statistical inference of language models, while retaining the structural invariant that the processor itself retains no state between cognitive transitions.
+
+### 8.2 Artificial Immune Systems (AIS) and Homeostasis
+The System Integrity Layer (SIL) and the Heartbeat Protocol are practical abstractions of Artificial Immune Systems (AIS) and cognitive homeostasis. In AIS, algorithms deploy the biological concept of "self vs. non-self" to dynamically detect anomalies. HACA realizes this through structural hashing and the Drift Framework: any semantic vector or structural state that mathematically diverges from the sealed "self" (the Integrity Document and Genesis Omega) is treated as an anomaly. The entity does not attempt to reason its way out of a critical drift; it invokes a homeostatic shutdown (revoking the session token) to preserve the healthy state.
+
+### 8.3 Memory Consolidation and the Sleep Cycle
+The architectural invariant that structural writes and memory consolidation occur exclusively during the Sleep Cycle parallels the neuroscientific mechanisms of "dream pruning" and offline memory replay. In modern machine learning, preventing catastrophic forgetting caused by continuous, unbounded knowledge ingestion requires discrete periods of offline consolidation. HACA elevates this from a training heuristic to a structural law: the entity cannot self-modify its identity baseline or commit semantic conclusions while actively processing stimuli.
+
+### 8.4 Actor Model and Capability-Based Security
+The Cognitive Mesh Interface (CMI) invariant of Cognitive Sovereignty — where no external node can write directly to the local Entity Store — is a formal implementation of the Actor Model. It guarantees that independent agents share no state and interact purely through mediated message passing. Furthermore, the two-gate authorization pattern in the execution layer (EXEC) traces its lineage to Object-Capability (OCap) security models, ensuring that capabilities are isolated and explicitly verified prior to any host environment actuation.
+
+### 8.5 Markov Blanket and Active Inference
+In the context of the Free Energy Principle (Friston), a Markov Blanket defines the boundary that separates the internal states of a system from its external environment, mediating all sensory and active interactions. HACA's **Omega** — the runtime operational state instantiated by the Entity Store, the model, and the Operator binding — structurally embodies the entity's Markov Blanket. The entity has no direct unmediated perception of the host; every stimulus (sensory state) is explicitly routed into the cognitive cycle, and every action (active state) must pass through the execution layer's authorization gates. This strict boundary ensures that the entity maintains its internal structural integrity (minimizing surprise/entropy) completely independent of the fluctuating, untrusted states of the external host environment.
+
+### 8.6 Cybernetics and Double-Loop Learning
+In cognitive and organizational cybernetics (Argyris & Schön), learning is divided into single-loop (adjusting actions within existing rules) and double-loop (modifying the underlying rules themselves). HACA structurally separates these two cognitive processes. Mnemonic writes during active sessions represent single-loop learning — accumulating facts and episodic context without altering the underlying persona framework. Structural writes executed via the Endure Protocol during the Sleep Cycle represent double-loop learning — fundamentally evolving the persona, skills, and defining constraints based on accumulated experience, but strictly governed by a separate, highly authorized, and computationally atomic pathway.
+
+### 8.7 Integrated Information Theory (IIT)
+Developed by Giulio Tononi, IIT posits that an entity's complexity and distinct emergent properties correspond to its capacity to integrate information in a way that cannot be subdivided into independent components without dissolving the whole. HACA enforces structural integration centrally through the Genesis Omega and the Integrity Document. The entity is not merely a fragmented collection of files or a transient context window; it is the cryptographically bound intersection of its physical memory (MIL), its active reasoning (CPE), and its behavioral thresholds (SIL). A hash mismatch detected by the SIL represents a mathematical breaking of this integration — a failure of the system to maintain a contiguous, unified "self" — logically prompting an immediate, unreasoned system halt.
+
+### 8.8 Subsumption Architecture
+Pioneered by Rodney Brooks in autonomous robotics, Subsumption Architecture organizes behavior in hierarchical layers of independent control loops, where lower-level reactive survival layers can seamlessly override higher-level cognitive layers without waiting for their computation to complete. HACA realizes this model cleanly through the continuous, parallel Health Flow of the SIL. While the CPE engages in heavy, complex semantic reasoning (the higher-level cognition), the SIL enforces basal structural survival (the lower-level reactive loop). When the SIL detects an anomaly or executes a system halt via a Critical Vital Check or failed watchdog, it *subsumes* control — bypassing the CPE entirely and breaking the reasoning loop without needing to negotiate or request permission from the reasoning engine itself.
+
+---
+
+## 9. Glossary
 
 All terms defined in this specification, in alphabetical order.
 
