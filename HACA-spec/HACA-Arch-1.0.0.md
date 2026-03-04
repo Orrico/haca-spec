@@ -138,7 +138,7 @@ Each Cognitive Cycle is driven by three elements: the stimulus that initiates it
 
 A **stimulus** initiates a Cognitive Cycle. Valid stimulus origins are: direct Operator input, internal scheduled triggers, or — when the cognitive mesh is present — inbound signals from peer entities. A stimulus received without an active session token is queued and processed when a token is issued.
 
-**Intent** is the output of the cognitive engine's reasoning phase — one or more structured payloads, each addressed to a specific component: an action payload to the execution layer, a state-write payload to the memory layer, or — when the cognitive mesh interface is present — an outbound message payload. Before dispatch, each payload is validated by the integrity layer against verified persisted state. Payloads that constitute drift are discarded and logged. The drift taxonomy is defined in §3.4.
+**Intent** is the output of the cognitive engine's reasoning phase — a single structured payload addressed to exactly one component: an action payload to the execution layer, a state-write payload to the memory layer, or — when the cognitive mesh interface is present — an outbound message payload. Before dispatch, the payload is validated by the integrity layer against verified persisted state. A payload that constitutes drift is discarded and logged. The drift taxonomy is defined in §3.4. A Cognitive Cycle produces exactly one intent payload; compound tasks requiring multiple actions are decomposed into sequential Cognitive Cycles, each independently atomic.
 
 An **action** is the execution of an intent payload by the execution layer. Each action is an isolated, stateless transaction scoped to a single declared skill. Execution requires a two-gate authorization: a manifest integrity check by the integrity layer, followed by a manifest validation by the execution layer. If either gate fails, the action is rejected and logged. The result is returned to the cognitive engine and simultaneously logged to the memory layer.
 
@@ -177,6 +177,8 @@ The **Heartbeat Protocol** runs asynchronously and continuously alongside active
 
 The value of `T` is defined at implementation time. The Pulse Counter alone is insufficient to detect execution stalls: a skill invoked through the execution layer may hang indefinitely, preventing any further cycle completion and blocking counter increment. The integrity layer therefore maintains a parallel watchdog timer — a time-absolute deadline associated with each active execution. If the deadline expires before the execution returns, the integrity layer treats the condition as a Critical state: the session token is revoked and the Operator is notified via the Operator Channel. The watchdog timeout value is defined at implementation time, independently of `T`.
 
+The watchdog timer applies exclusively to **synchronous skills** — skills that block the Cognitive Cycle until they return. Skills whose manifest declares them as **background** are exempt from the watchdog. When a background skill is dispatched by the EXEC, it does not block the Cognitive Cycle: the EXEC spawns the execution and immediately returns an **Execution Lease** to the CPE and the MIL. The Execution Lease is a structured record identifying the running background process, its declared skill, and its initiation timestamp. From this point, the background process is not tracked as a pending step of the active Cognitive Cycle; the cycle proceeds and may close normally. The SIL monitors active Execution Leases through the Health Flow, polling each Lease at defined intervals independently of the Pulse Counter. If a Lease reports an abnormal termination — process killed, host signal, unhandled exception — the SIL evaluates the failure against the skill's declared criticality: non-critical background failures are treated as Degraded; critical background failures trigger the same escalation path as a Critical Vital Check. The Execution Lease record is persisted by the MIL and remains in the Session Store until the background process terminates and the SIL confirms closure.
+
 The **Drift Framework** defines four categories of behavioral or structural deviation that the integrity layer monitors. The Genesis Omega is the cryptographic root against which all drift is ultimately referenced. Each Endure commit extends the integrity chain from that root. Detection criteria, tolerance thresholds, and response procedures for each drift type are defined by the active profile specification.
 
 - **Inference Drift** — an intent payload produced by the cognitive engine contradicts verified persisted state in the memory layer. Detected per Cognitive Cycle during payload dispatch.
@@ -194,6 +196,8 @@ The **Bound** is the persistent link between the entity and its Operator, establ
 
 The **Operator Channel** is the integrity layer's direct out-of-band communication path to the Operator. It is established during first activation and remains available for the entity's entire lifecycle. Under normal operating conditions, Operator notifications may be routed through the cognitive engine. In conditions where the cognitive engine is the source of the anomaly — detected drift, reasoning failure, or integrity violation — the Operator Channel bypasses the cognitive engine entirely. The Operator Channel is implemented as a direct signaling mechanism: a terminal prompt, an email notification, or any equivalent out-of-band channel. The specific mechanism is defined at implementation time; the requirement that it does not depend on the cognitive engine is invariant.
 
+If the active Operator Channel mechanism fails to deliver an escalation — defined as N consecutive delivery attempts that all time out or are blocked at the network or host boundary — the SIL activates the **Passive Distress Beacon**. The beacon writes a single marker file to the root of the Entity Store directory with a reserved, unambiguous name (e.g., `ERR_CRITICAL_HALTED.state`), recording the escalation cause, timestamp, and last known session token state. The entity then enters a suspended halt: no new session token is issued and no Cognitive Cycles execute until an Operator explicitly clears the beacon and acknowledges the condition. The beacon is designed to be recoverable by any party with read access to the Entity Store root, independent of network connectivity, running processes, or display infrastructure. The threshold N and the exact beacon filename are defined at implementation time.
+
 The **FAP** (First Activation Protocol) is the sequential bootstrap procedure that executes the Imprint. The FAP is not a Cognitive Cycle — no session token exists at this stage and the cognitive engine reasoning layer is not active. The FAP executes as a gated sequential pipeline:
 
 ```
@@ -201,6 +205,8 @@ structural validation → host environment capture → Operator enrollment → O
 ```
 
 Any failure before the Imprint Record is written leaves the Memory Store empty; the FAP will re-execute on the next boot. The components through which each FAP stage executes are specified in Section 4.
+
+All FAP stages from Operator enrollment onward execute in-memory or in a protected ephemeral buffer — no partial writes reach the Entity Store during this window. Only when all stages have completed successfully does the FAP perform a single atomic commit: the Imprint Record, Integrity Document, and Genesis Omega are written to the Entity Store as an indivisible operation. If the host is interrupted mid-write (power loss, process kill, disk failure), the resulting partial state is treated as an empty Memory Store and the FAP re-executes on the next boot. This staged commit guarantee ensures the Entity Store can never enter a partially-initialized state from which subsequent FAP execution is impossible.
 
 ---
 
@@ -223,6 +229,8 @@ The topology classification is binding: HACA-Core requires Transparent CPE topol
 
 The CPE exposes one internal mechanism: **`<internal_voice>`**. When invoked by the agent, content within the tag is sent to the model in raw inference mode — persona constraints are suspended for that specific call. The model response is returned with `<internal_voice>` tags and to the agent within the CPE context. The agent processes this response through normal persona-constrained reasoning before generating any intent payload. No output of an `<internal_voice>` invocation leaves the CPE without passing through the persona layer. `<internal_voice>` output is ephemeral — it is not logged and not persisted.
 
+The CPE maintains a **Volatile Diagnostic Buffer** that retains the full `<internal_voice>` output for the duration of the current Cognitive Cycle only. If the cycle closes with a Nominal Heartbeat state, the buffer is discarded without being written to any persistent store. If the cycle triggers a Critical escalation — either through an active SIL response or through a Heartbeat Vital Check that concludes Critical — the SIL locks the buffer before it can be discarded and instructs the MIL to persist it as a sealed diagnostic attachment appended to the cycle's integrity log entry. The long-term Memory Store is unaffected; the diagnostic record is written exclusively to the static integrity log. This mechanism preserves the privacy and mnemonic purity of normal operation while ensuring that the deliberation trace of a compromised cycle remains available for forensic analysis of prompt injection or behavioral anomalies.
+
 ### 4.2 MIL — Memory Interface Layer
 
 The entity's persistence layer and sole authoritative source of recorded state. The MIL has exclusive write authority over mnemonic content — all read and write operations to the Session Store and the Memory Store. Mnemonic writes are continuous and require no authorization beyond the MIL's own operational authority; they are the normal output of the entity's operation. The MIL does not interpret, evaluate, or act on stored data.
@@ -235,7 +243,7 @@ The MIL manages the Sleep Cycle scheduler: it initiates memory consolidation, ex
 
 The entity's actuation layer and the sole component authorized to interact with the host environment — filesystem, terminal, external APIs, and any other external interface. When the model is accessed via API and the HACA layer mediates all host access, this boundary is architecturally enforceable. In deployment contexts where the model has native host access — local model deployments or tool-enabled inference environments — enforcement is the responsibility of the deployment configuration.
 
-The EXEC is stateless — it retains no state between executions. All executable capabilities are packaged as **skills**: discrete, self-contained units within the Entity Store, each with a manifest that declares the skill's identity, required permissions, and dependencies.
+The EXEC is stateless — it retains no state between executions. All executable capabilities are packaged as **skills**: discrete, self-contained units within the Entity Store, each with a manifest that declares the skill's identity, required permissions, dependencies, execution mode, and — for background skills — criticality. The execution mode is either **synchronous** (default) or **background**. Synchronous skills block the Cognitive Cycle and are subject to the watchdog timer. Background skills return an Execution Lease immediately and are monitored by the SIL through the Health Flow, as defined in §3.4. Criticality is declared as critical or non-critical and governs the SIL's escalation path on abnormal termination.
 
 Execution follows a two-gate authorization sequence. First gate: the EXEC requests a manifest integrity check from the SIL; the SIL verifies that the skill's manifest hash matches the Integrity Document and returns a grant or denial without modifying the payload. Second gate: if granted, the EXEC validates the manifest against its own declared execution rules — permissions, dependencies, and execution context. If either gate fails, the payload is rejected and logged to the MIL. If both gates pass, the skill executes. The result is returned to the CPE and simultaneously logged to the MIL.
 
@@ -269,11 +277,11 @@ The five components form a directed communication topology governed by strict ru
 
 Three flows govern component interactions at runtime.
 
-**The Cognitive Flow** is the path of a single Cognitive Cycle. The CPE requests context from the MIL — current session state, relevant memory records, and the active persona. The MIL returns the requested context. The CPE executes the reasoning phase and produces one or more intent payloads. Action payloads are dispatched to the EXEC; state-write payloads are sent to the MIL. The CPE commits the final cycle state to the MIL to close the cycle. The MIL is the terminal component in every Cognitive Cycle — state persistence is the final operation.
+**The Cognitive Flow** is the path of a single Cognitive Cycle. The CPE requests context from the MIL — current session state, relevant memory records, and the active persona. The MIL returns the requested context. The CPE executes the reasoning phase and produces a single intent payload. The payload is dispatched to its target component: to the EXEC if it is an action payload, to the MIL if it is a state-write payload, or to the CMI if it is an outbound message payload. The CPE commits the final cycle state to the MIL to close the cycle. The MIL is the terminal component in every Cognitive Cycle — state persistence is the final operation.
 
 **The Execution Flow** is the path of a single action payload. The EXEC receives the payload from the CPE and requests a manifest integrity check from the SIL. The SIL verifies the skill manifest hash against the Integrity Document and returns a grant or denial without modifying the payload. If granted, the EXEC validates the manifest against its own execution rules and executes the skill. The result is returned to the CPE and simultaneously written to the MIL. If either check fails, the payload is rejected and the rejection is logged to the MIL.
 
-**The Health Flow** runs continuously and orthogonally to the Cognitive and Execution flows. Each component emits health signals to the SIL at defined intervals. The SIL evaluates incoming signals, applies autonomous corrections within its authority, and escalates via the Operator Channel when required. The Health Flow does not interrupt active Cognitive or Execution flows.
+**The Health Flow** runs continuously and orthogonally to the Cognitive and Execution flows. Each component emits health signals to the SIL at defined intervals. The SIL evaluates incoming signals, applies autonomous corrections within its authority, and escalates via the Operator Channel when required. The Health Flow does not interrupt active Cognitive or Execution flows. The Health Flow also covers active Execution Leases: the SIL polls each open Lease independently of the Pulse Counter and evaluates abnormal terminations according to the skill's declared criticality. When the Health Flow produces a Critical escalation, the SIL locks the current Volatile Diagnostic Buffer before it can be discarded and instructs the MIL to persist it as a sealed attachment to the Integrity Log.
 
 One constraint applies to all three flows: **only the MIL writes persistent state**. The CPE reasons, the EXEC acts, the SIL monitors and enforces — none of them write to the Entity Store directly. All persistence is mediated by the MIL.
 
@@ -299,7 +307,7 @@ Each concept defined in Section 3 is realized by a specific configuration of com
 
 **Memory** is realized exclusively by the MIL. No other component writes persistent state. The MIL's two stores — the Session Store and the Memory Store — are the sole authoritative record of everything the entity has processed and learned.
 
-**Integrity** is realized across three concurrent mechanisms. First, the SIL and the EXEC operate as two independent authorization gates on every skill execution: the EXEC requests a manifest integrity check from the SIL, which verifies structural integrity and returns a grant or denial; the EXEC applies its own validation as the second gate. Both gates must pass independently; neither substitutes for the other. Second, the SIL orchestrates the Heartbeat Protocol — continuously monitoring all components, evaluating health signals, and escalating to the Operator when anomalies exceed its correction authority. Third, structural evolution is realized jointly by the MIL and the SIL executing the Endure Protocol during the Sleep Cycle: the MIL commits the structural write atomically while the SIL updates the Integrity Document to extend the verified chain.
+**Integrity** is realized across four concurrent mechanisms. First, the SIL and the EXEC operate as two independent authorization gates on every skill execution: the EXEC requests a manifest integrity check from the SIL, which verifies structural integrity and returns a grant or denial; the EXEC applies its own validation as the second gate. Both gates must pass independently; neither substitutes for the other. Second, the SIL orchestrates the Heartbeat Protocol — continuously monitoring all components, evaluating health signals, and escalating to the Operator when anomalies exceed its correction authority. Third, structural evolution is realized jointly by the MIL and the SIL executing the Endure Protocol during the Sleep Cycle: the MIL commits the structural write atomically while the SIL updates the Integrity Document to extend the verified chain. Fourth, the CPE maintains a Volatile Diagnostic Buffer for each active Cognitive Cycle: on Critical escalation, the SIL locks the buffer and the MIL persists it as a sealed diagnostic attachment to the Integrity Log, preserving the internal deliberation trace for forensic analysis without affecting the long-term Memory Store.
 
 **Individuation** is realized sequentially across all components during the FAP. The FAP is the only point in the entity's lifecycle where components initialize in strict dependency order rather than operating concurrently. The output of a completed FAP — the Imprint Record in the Memory Store and the Genesis Omega in the integrity chain — is the product of all components having completed their initialization stages in sequence.
 
@@ -335,7 +343,7 @@ integrity record verification → structural component verification
   → session token issued
 ```
 
-Each gate must pass before the next executes. If any gate fails, the boot is aborted and the SIL escalates directly to the Operator.
+Each gate must pass before the next executes. If any gate fails, the boot is aborted and the SIL escalates directly to the Operator. As a prerequisite to the entire sequence, the SIL checks for the presence of a Passive Distress Beacon in the Entity Store root. If a beacon exists, the Boot Sequence is suspended — no gate executes and no session token is issued — until the Operator explicitly acknowledges and clears the beacon condition.
 
 The integrity record verification is the first and most critical gate: the SIL verifies the Integrity Document against a known anchor before trusting any other component. The execution confinement check verifies that the active CPE topology matches the declared profile requirement — a HACA-Core deployment that detects an Opaque CPE at this step must halt.
 
@@ -388,7 +396,7 @@ HACA-Arch provides four structural security properties by construction:
 
 ### 7.2 Prompt Injection
 
-The language model sits outside the deterministic trust perimeter. HACA-E mitigates prompt injection through structural boundaries — the persona layer constrains the cognitive engine's output, and intent payloads are validated by the integrity layer before dispatch — but it does not eliminate the risk. A sufficiently crafted stimulus may cause the model to produce intent payloads that are structurally valid but semantically adversarial. The authorization gates on execution reduce the blast radius of such payloads, but the model's interpretation of input is inherently outside the scope of architectural enforcement. Deployments in adversarial environments should combine HACA-Arch's structural controls with the hardened validation mechanisms defined in HACA-Security.
+The language model sits outside the deterministic trust perimeter. HACA-Arch mitigates prompt injection through structural boundaries — the persona layer constrains the cognitive engine's output, and intent payloads are validated by the integrity layer before dispatch — but it does not eliminate the risk. A sufficiently crafted stimulus may cause the model to produce intent payloads that are structurally valid but semantically adversarial. The authorization gates on execution reduce the blast radius of such payloads, but the model's interpretation of input is inherently outside the scope of architectural enforcement. Deployments in adversarial environments should combine HACA-Arch's structural controls with the hardened validation mechanisms defined in HACA-Security.
 
 ### 7.3 Entity Store Tampering
 
@@ -454,15 +462,19 @@ All terms defined in this specification, in alphabetical order.
 
 **Integrity Document** — the cryptographic baseline of the entity's structural state, generated at first activation. Contains the hash of every structural file across all components. Verified at every boot, before every skill execution, and at each Heartbeat Vital Check.
 
-**Intent** — the output of the cognitive engine's reasoning phase: one or more structured payloads addressed to specific components (execution layer, memory layer, or mesh interface). Validated by the integrity layer before dispatch.
+**Integrity Log** — the append-only record of integrity events maintained by the SIL within the Entity Store. Distinct from the Memory Store: the Integrity Log is never written by the MIL's mnemonic pipeline and is never subject to garbage collection. Receives sealed diagnostic attachments from the Volatile Diagnostic Buffer on Critical escalation.
 
-**`<internal_voice>`** — the CPE mechanism that sends content to the model in raw inference mode, suspending persona constraints for that specific call. Output is ephemeral and never leaves the CPE without passing through the persona layer.
+**Intent** — the output of the cognitive engine's reasoning phase: a single structured payload addressed to exactly one component (execution layer, memory layer, or mesh interface). Validated by the integrity layer before dispatch. A Cognitive Cycle produces exactly one intent payload.
+
+**`<internal_voice>`** — the CPE mechanism that sends content to the model in raw inference mode, suspending persona constraints for that specific call. Output is ephemeral and never leaves the CPE without passing through the persona layer. See also: Volatile Diagnostic Buffer.
 
 **Memory Store** — the long-term partition of the entity's memory: episodic records of past operations and semantic knowledge accumulated over time.
 
 **MIL (Memory Interface Layer)** — the entity's persistence layer and sole authoritative source of recorded state. Has exclusive write authority over mnemonic content. Does not interpret or evaluate stored data.
 
 **Mnemonic Content** — memory records and operational state written continuously by the memory layer during normal operation. Requires no additional authorization beyond normal MIL operation.
+
+**Volatile Diagnostic Buffer** — a per-cycle ephemeral buffer maintained by the CPE that retains `<internal_voice>` output for the duration of the current Cognitive Cycle. Discarded silently on Nominal cycle close; locked and persisted to the integrity log by the SIL on Critical escalation.
 
 **Omega** — the runtime operational state of the entity: the active configuration produced by the Entity Store, the loaded model, and the Operator binding operating together within a session. Strictly local; does not transfer or replicate.
 
@@ -472,7 +484,9 @@ All terms defined in this specification, in alphabetical order.
 
 **Operator Bound** — the persistent link between the entity and its Operator, established during first activation. Can only be dissolved or transferred by explicit Operator authorization.
 
-**Operator Channel** — the integrity layer's direct out-of-band communication path to the Operator. Bypasses the cognitive engine entirely when the cognitive engine is the source of an anomaly.
+**Operator Channel** — the integrity layer's direct out-of-band communication path to the Operator. Bypasses the cognitive engine entirely when the cognitive engine is the source of an anomaly. See also: Passive Distress Beacon.
+
+**Passive Distress Beacon** — a fallback signaling mechanism activated by the SIL when all active Operator Channel delivery attempts are exhausted. Writes a marker file to the Entity Store root and suspends the entity until the Operator acknowledges the condition. Requires no network connectivity or running processes to remain detectable.
 
 **Operator Hash** — the deterministic cryptographic digest of the Operator's identifying fields. The entity's permanent identifier for its bound Operator.
 
@@ -486,7 +500,9 @@ All terms defined in this specification, in alphabetical order.
 
 **SIL (System Integrity Layer)** — the entity's integrity monitoring and enforcement layer, and its highest internal authority. Sole custodian of the Integrity Document and sole issuer of the session token.
 
-**Skill** — a discrete, self-contained executable capability unit within the Entity Store, with a manifest declaring its identity, required permissions, and dependencies.
+**Skill** — a discrete, self-contained executable capability unit within the Entity Store, with a manifest declaring its identity, required permissions, dependencies, execution mode (synchronous or background), and — for background skills — criticality (critical or non-critical). Criticality governs the SIL's escalation path on abnormal background process termination.
+
+**Execution Lease** — a structured record returned by the EXEC to the CPE and MIL when a background skill is dispatched. Identifies the running process, its declared skill, and its initiation timestamp. Persisted in the Session Store; monitored by the SIL through the Health Flow until the process terminates.
 
 **Sleep Cycle** — the post-session maintenance window that runs after every Session Cycle closes. Managed by the MIL; executes memory consolidation, garbage collection, and queued Endure commits sequentially.
 
