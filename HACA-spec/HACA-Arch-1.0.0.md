@@ -252,15 +252,17 @@ Each component maintains a **Reciprocal SIL Watchdog**: a local monitor that det
 
 ### 4.5 CMI — Cognitive Mesh Interface *(optional)*
 
-The **CMI** (Cognitive Mesh Interface) is an optional component, activated when the HACA-CMI extension is enabled. When present, it enables the entity to send and receive structured messages to and from peer entities, access shared knowledge spaces, and participate as a node in a broader cognitive network. The CMI extends the entity's operational reach beyond its local boundary without replicating or transferring Omega, which remains strictly local.
+The **CMI** (Cognitive Mesh Interface) is an optional component, activated when the HACA-CMI extension is enabled. When present, it enables the entity to participate in a structured multi-entity coordination space — exchanging messages with peer entities, contributing to shared knowledge, and operating as a node in a broader cognitive network. The CMI extends the entity's operational reach beyond its local boundary without replicating or transferring Omega, which remains strictly local.
 
 Without the CMI, the entity is fully operational: all stimuli originate locally and all state remains within the local Entity Store.
 
-The fundamental design principle of the mesh is: **the node is the permanent entity; the session is the ephemeral context**. A CMI session is a purposive, time-bounded coordination space. Nodes enroll, contribute, and dis-enroll; when the session ends, each node returns to autonomous operation. No node's identity is dissolved into or altered by session participation.
+The fundamental design principle of the mesh is: **the node is the permanent entity; the session is the ephemeral context**. The fundamental unit of CMI coordination is the **Mesh Channel** — a purposive, time-bounded space opened by an entity that becomes its owner for the session's duration. A Mesh Channel has a declared target task, a visibility type (public or private), and a defined lifecycle: it is opened by the owner, participated in by enrolled entities, and closed when the task is complete or the owner dissolves it. Entities may enroll in public Mesh Channels freely; private Mesh Channels require owner authorization. HACA-Core entities may only participate in private Mesh Channels — public Mesh Channels are incompatible with the zero-autonomy model. HACA-Evolve entities may participate in both. When the Mesh Channel closes, each node returns to autonomous operation — no node's identity is dissolved into or altered by participation.
+
+Within a Mesh Channel, entities exchange messages freely. Each entity interacts with what is relevant to its own context — no entity is required to act on every message. The shared output of a Mesh Channel session is the **Blackboard**: a consolidation of the target task state and the knowledge developed during the session, accessible to all participating entities. Each entity reads the Blackboard and independently decides what to retain — saving to its own Entity Store only what is relevant to its own context and following its normal authorization path.
 
 The governing invariant of mesh participation is **Cognitive Sovereignty**: no external entity may write directly to another entity's Entity Store. The mesh only offers — the entity always acts on itself. A peer may submit content to the local CMI for consideration; the SIL must approve before any peer-sourced content enters the local cognitive namespace. Omega remains strictly local and does not transfer, replicate, or become collective through mesh interaction.
 
-The protocols governing mesh communication, peer identity verification, and shared knowledge access are defined in HACA-CMI.
+The protocols governing Mesh Channel establishment, peer identity verification, message format, and Blackboard synchronization are defined in HACA-CMI.
 
 ---
 
@@ -413,9 +415,11 @@ All terms defined in this specification, in alphabetical order.
 
 **Action** — the execution of an intent payload by the execution layer. Each action is an isolated, stateless transaction scoped to a single declared skill.
 
-**CMI (Cognitive Mesh Interface)** — the optional component that enables the entity to communicate with peer entities, access shared knowledge spaces, and participate in a Cognitive Mesh. Activated by the HACA-CMI extension.
-
 **Behavioral and Semantic Probes** — the entity's drift reference baseline: a set of behavioral and semantic anchors derived from structural content and maintained by the integrity layer. The CPE uses behavioral probes to detect Inference Drift; the MIL uses semantic probes to detect Semantic Drift. Initialized from the Imprint Record at first activation; updated only through authorized structural evolution.
+
+**Blackboard** — the shared consolidation space of a CMI channel session: a record of the target task state and knowledge developed during the session, accessible to all participating entities. Each entity reads the Blackboard independently and decides what to retain in its own Entity Store, following its normal authorization path.
+
+**CMI (Cognitive Mesh Interface)** — the optional component that enables the entity to communicate with peer entities, access shared knowledge spaces, and participate in a Cognitive Mesh. Activated by the HACA-CMI extension.
 
 **Cognitive Cycle** — the atomic unit of cognition: stimulus received → context loaded → intent generated → intent dispatched. The cycle is complete when the intent leaves the CPE. What follows — execution, persistence, monitoring — is the consequence of the dispatched intent, handled by the responsible components independently.
 
@@ -472,6 +476,8 @@ All terms defined in this specification, in alphabetical order.
 **Internal Reasoning Mode** — the CPE mechanism that invokes the model without persona constraints for a specific inference, allowing unconstrained deliberation. Output is ephemeral and never leaves the CPE without passing through the persona layer. See also: Volatile Diagnostic Buffer.
 
 **Memory Store** — the long-term partition of the entity's memory: episodic records of past operations and semantic knowledge accumulated over time.
+
+**Mesh Channel** — the fundamental unit of CMI coordination: a purposive, time-bounded space opened by an owner entity, with a declared target task and a visibility type (public or private). HACA-Core entities may only participate in private Mesh Channels; HACA-Evolve entities may participate in both. A Mesh Channel is closed by its owner or when its target task is complete; all participating nodes return to autonomous operation at close.
 
 **MIL (Memory Interface Layer)** — the entity's persistence layer and sole authoritative source of recorded state. Has exclusive write authority over mnemonic content. Does not interpret or evaluate stored data.
 
